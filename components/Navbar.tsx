@@ -5,11 +5,10 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
 const navLinks = [
-  { href: '/', label: 'Overview' },
-  { href: '/brand', label: 'Brand' },
-  { href: '/strategy', label: 'Strategy' },
-  { href: '/templates', label: 'Templates' },
+  { href: '/content', label: 'Content Kit' },
   { href: '/calendar', label: 'Calendar' },
+  { href: '/ads', label: 'Paid Ads' },
+  { href: '/brand', label: 'Brand' },
 ]
 
 export default function Navbar() {
@@ -17,27 +16,24 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-orange-100">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FD5C1E] to-[#D72C0D] flex items-center justify-center">
-            <span className="text-white font-bold text-sm">J</span>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FD5C1E] to-[#D72C0D] flex items-center justify-center">
+            <span className="text-white font-black text-xs">J</span>
           </div>
-          <span className="font-bold text-[#0D0D0D] text-lg tracking-tight">joyn</span>
-          <span className="text-xs text-gray-400 font-medium hidden sm:block">strategy hub</span>
+          <span className="font-black text-[#0D0D0D] tracking-tight">JOYN PLAYBOOK</span>
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-0.5">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 pathname === link.href
-                  ? 'bg-[#FD5C1E] text-white'
-                  : 'text-gray-600 hover:text-[#FD5C1E] hover:bg-orange-50'
+                  ? 'bg-[#0D0D0D] text-white'
+                  : 'text-gray-500 hover:text-[#0D0D0D] hover:bg-gray-50'
               }`}
             >
               {link.label}
@@ -45,42 +41,29 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* CTA */}
         <a
           href="https://www.joynthefun.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden md:block px-4 py-2 bg-gradient-to-r from-[#FD5C1E] to-[#D72C0D] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity"
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-[#FD5C1E] text-white text-sm font-bold rounded-lg hover:bg-[#D72C0D] transition-colors"
         >
-          Visit Joyn →
+          Shop Joyn ↗
         </a>
 
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="md:hidden p-2 text-gray-600"
-          aria-label="Menu"
-        >
-          <div className="w-5 h-0.5 bg-current mb-1"></div>
-          <div className="w-5 h-0.5 bg-current mb-1"></div>
-          <div className="w-5 h-0.5 bg-current"></div>
+        <button onClick={() => setOpen(!open)} className="md:hidden p-2" aria-label="Menu">
+          <div className="w-5 space-y-1">
+            <div className="h-0.5 bg-gray-700"></div>
+            <div className="h-0.5 bg-gray-700"></div>
+            <div className="h-0.5 bg-gray-700"></div>
+          </div>
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 flex flex-col gap-2">
+        <div className="md:hidden bg-white border-t px-4 py-3 flex flex-col gap-1">
           {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                pathname === link.href
-                  ? 'bg-[#FD5C1E] text-white'
-                  : 'text-gray-700 hover:bg-orange-50'
-              }`}
-            >
+            <Link key={link.href} href={link.href} onClick={() => setOpen(false)}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold ${pathname === link.href ? 'bg-[#0D0D0D] text-white' : 'text-gray-700 hover:bg-gray-50'}`}>
               {link.label}
             </Link>
           ))}
