@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const links = [
-  { href: '#opportunity', label: 'Opportunity' },
-  { href: '#platforms', label: 'Platforms' },
-  { href: '#content', label: 'Content' },
-  { href: '#paid', label: 'Paid' },
+  { href: '#today', label: 'Today' },
+  { href: '#captions', label: 'Captions' },
+  { href: '#hashtags', label: 'Hashtags' },
   { href: '#calendar', label: 'Calendar' },
+  { href: '#ads', label: 'Ads' },
   { href: '#brand', label: 'Brand' },
 ]
 
@@ -22,7 +22,7 @@ export default function Nav() {
           <span className="w-6 h-6 rounded bg-[#FD5C1E] flex items-center justify-center text-white font-black text-xs">J</span>
           <span className="font-black text-sm tracking-tight text-[#0a0a0a]">JOYN</span>
           <span className="text-gray-300 text-sm">|</span>
-          <span className="text-gray-400 text-xs font-medium">2026 Social Strategy</span>
+          <span className="text-gray-400 text-xs font-medium">2026 Social Playbook</span>
         </Link>
 
         {isHome && (
