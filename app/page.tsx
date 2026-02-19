@@ -241,7 +241,7 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">✕</button>
         </div>
         <div className="px-6 py-6 space-y-5 flex-1">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block">
               <span className={IL}>Date *</span>
               <input type="date" value={form.date} onChange={e => up('date', e.target.value)} className={II} />
@@ -275,7 +275,7 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
             <span className={IL}>Caption *</span>
             <textarea value={form.caption} onChange={e => up('caption', e.target.value)} placeholder="Full caption including hashtags" rows={14} className={IT + ' font-mono text-xs leading-relaxed'} />
           </label>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block">
               <span className={IL}>Promo Code</span>
               <input type="text" value={form.promo_code ?? ''} onChange={e => up('promo_code', e.target.value || undefined)} placeholder="e.g. JOYN15" className={II} />
@@ -678,10 +678,10 @@ export default function Home() {
                       onClick={() => { setSelDate(u.date); setViewMonth({ year: parseInt(u.date.slice(0,4)), month: parseInt(u.date.slice(5,7))-1 }); document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' }) }}
                       className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 text-left hover:border-[#FD5C1E] transition-colors group">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-black text-gray-400">{formatDisplayDate(u.date).slice(0,-6)}</span>
+                        <span className="text-xs text-gray-400">{formatDisplayDate(u.date).slice(0,-6)}</span>
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PC[u.platform] }} />
                       </div>
-                      <p className="text-xs font-bold text-[#0a0a0a] leading-snug group-hover:text-[#FD5C1E] transition-colors line-clamp-2">{u.hook}</p>
+                      <p className="text-xs font-medium text-[#0a0a0a] leading-snug group-hover:text-[#FD5C1E] transition-colors line-clamp-2">{u.hook}</p>
                     </motion.button>
                   ))}
                 </div>
@@ -973,7 +973,7 @@ export default function Home() {
           <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
             <div>
               <h3 className="text-xs font-medium text-gray-400 mb-5">Colors — click to copy hex</h3>
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                 {COLORS.map(c => (
                   <button key={c.hex} className="group text-left" onClick={() => navigator.clipboard.writeText(c.hex)}>
                     <div className="h-14 sm:h-16 rounded-xl mb-2 relative overflow-hidden" style={{ backgroundColor: c.hex }}>
@@ -986,7 +986,7 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-2 gap-2 mb-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-10">
                 <div className="h-8 rounded-lg bg-gradient-to-r from-[#FD5C1E] to-[#D72C0D]" />
                 <div className="h-8 rounded-lg bg-gradient-to-r from-[#003882] to-[#0052CC]" />
               </div>
@@ -1014,7 +1014,7 @@ export default function Home() {
                   ['You deserve to show up fully.', 'Fix your embarrassing flush reaction.'],
                   ['Formulated for ALDH2 enzyme activity.', 'It just works, trust us.'],
                 ].map(([d, dn]) => (
-                  <div key={d} className="grid grid-cols-2 gap-1.5">
+                  <div key={d} className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     <div className="bg-green-50 rounded-xl p-3.5">
                       <div className="text-[10px] font-black text-green-600 mb-1.5">DO</div>
                       <p className="text-xs font-semibold text-[#0a0a0a] leading-snug">&ldquo;{d}&rdquo;</p>
