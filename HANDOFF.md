@@ -97,11 +97,12 @@ These placeholder items MUST be updated before posting:
 |--------|-------------|
 | **Post 6** | JOYN15 — verify this code is active in your Shopify store |
 | **Post 12** | Replace all `[Customer Name]`, `[Customer quote]`, `[ADD LAUNCH CODE]` with real verified content. Get **written permission** from every customer you quote. |
-| **Post 13** | Add your actual Lunar New Year promo code in place of `[ADD LNY CODE]` |
-| **Post 14** | Add your Valentine's Day promo code in place of `[ADD CODE]` |
+| **Post 13** | Add your Women's History Month promo code in place of `[ADD CODE]` |
+| **Post 14** | Add your Spring Season promo code in place of `[ADD CODE]` |
 | **Post 15** | Replace `[Dr. Name, Credentials]` and the quote placeholder with your real medical advisor's words. Get **written sign-off before publishing**. Fabricated expert endorsements are an FTC violation. |
 | **Post 21** | Add Spring Break promo code in place of `[ADD CODE]` |
 | **Post 22** | Collect real DM stories + written permission before building this post. Replace all `[Customer quote]` and `[Name]` placeholders. |
+| **Post 26** | Add St. Patrick's Day promo code in place of `[ADD CODE]` |
 | **Post 27** | Add promo code in place of `[ADD CODE]` |
 
 **Any post with an orange ⚠️ warning banner is NOT ready to post as-is.**

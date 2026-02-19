@@ -103,7 +103,7 @@ export default function SetupPage() {
               'Post 12 — Replace [Customer quote] and [Customer Name] with real customers (get written permission)',
               'Post 15 — Replace [Dr. Name] quote with your real medical advisor (get written sign-off first)',
               'Post 22 — Collect real DM stories and written permissions before building this post',
-              'Posts 13, 14, 21, 27 — Fill in your actual promo codes in place of [ADD CODE]',
+              'Posts 13, 14, 21, 26, 27 — Fill in your actual promo codes in place of [ADD CODE]',
               'Post 6 — Verify JOYN15 is active in your Shopify store',
             ].map(item => (
               <li key={item} className="flex items-start gap-2">
