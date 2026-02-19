@@ -108,6 +108,44 @@ function ShootBrief({ text, dark = false }: { text: string; dark?: boolean }) {
   )
 }
 
+function SetupBanner() {
+  const [dismissed, setDismissed] = useState(true)
+  useEffect(() => {
+    setDismissed(localStorage.getItem('joyn-setup-done') === '1')
+  }, [])
+  if (dismissed) return null
+  return (
+    <div className="bg-[#003882] border-b border-blue-900">
+      <div className="max-w-screen-xl mx-auto px-6 lg:px-16 py-5">
+        <div className="flex items-start gap-6 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-3">Before your first post — 4 things to action</p>
+            <div className="grid sm:grid-cols-2 gap-x-10 gap-y-2.5">
+              {([
+                ['Verify all promo codes', 'Confirm JOYN15 and any [ADD CODE] placeholders are active in your Shopify store before posting'],
+                ['Replace [Customer Name] placeholders', 'Posts 12 and 22 have template testimonials — swap in real customers with their explicit written permission'],
+                ['Replace the doctor quote on Day 15', 'Post 15 has a template physician quote — use a real medical advisor\'s words or restructure the post'],
+                ['Read every caption once', 'All 28 are copy-ready but voice, facts, and claims are yours to own — one read-through before publishing'],
+              ] as [string, string][]).map(([title, desc]) => (
+                <div key={title} className="flex items-start gap-2">
+                  <span className="text-[#FD5C1E] text-xs mt-0.5 shrink-0">→</span>
+                  <p className="text-xs text-blue-100 leading-relaxed"><span className="font-bold text-white">{title}:</span> {desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => { localStorage.setItem('joyn-setup-done', '1'); setDismissed(true) }}
+            className="text-blue-400 text-xs font-bold hover:text-white transition-colors whitespace-nowrap shrink-0 border border-blue-700 hover:border-blue-400 px-4 py-2 rounded-lg"
+          >
+            Got it — hide this
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── data ──────────────────────────────────────────────────────────────────────
 type Platform = 'TikTok' | 'Instagram' | 'Pinterest'
 type Post = { id: number; day: number; week: 1|2|3|4; platform: Platform; format: string; hook: string; shoot: string; caption: string; warn?: string; promoCode?: string }
@@ -343,31 +381,29 @@ I was just there. Fully.
   },
   {
     id:12, day:12, week:2, platform:'Instagram', format:'Quote Card',
-    warn: 'Template quote — replace "Sarah, 32" with a real verified customer before posting. DM customers who\'ve left positive reviews and ask permission to use their words publicly.',
-    promoCode: 'SARAH15',
-    hook: '"I stayed until midnight for the first time." — Sarah, 32',
-    shoot: 'Clean quote card on Joyn orange background. Or a warm candid celebration photo with the quote overlaid. Let the quote do all the work.',
-    caption: `"I stayed until midnight for the first time." — Sarah, 32 🥂
+    warn: 'Template post — replace every [placeholder] with a real verified customer before posting. DM 5-star reviewers and get explicit written permission to use their words publicly. Never post fabricated testimonials.',
+    promoCode: '[ADD LAUNCH CODE]',
+    hook: '"[Customer quote — their own words, their own moment.]" — [Name, Age]',
+    shoot: 'Clean quote card on Joyn orange background. Or a warm candid celebration photo with the quote overlaid. Let the real quote do all the work.',
+    caption: `"[Customer quote — their own words, their own moment.]" — [Name, Age] 🥂
 
-Sarah had been using Pepcid off-label for 8 years. Stomach issues. Always left parties early.
+[1–2 sentences: their background. What they struggled with. How long they lived with it.]
 
-Two weeks into Joyn, she attended her company holiday party.
-
-She danced. She made every toast. She was the last of her group to leave.
+[Their Joyn moment — one specific real detail. Real event. Real time. Real feeling.]
 
 That's why we built this.
 
 Real review. Real customer.
 
-→ Link in bio. Use code SARAH15 for 15% off.
+→ Link in bio. Use code [ADD LAUNCH CODE] for 15% off.
 
 #Joyn #CustomerStory #ALDH2 #AlcoholFlush #ConfidenceInACapsule #Testimonial`,
   },
   {
     id:13, day:13, week:2, platform:'Instagram', format:'Cultural Moment',
-    promoCode: 'LNY25',
+    promoCode: '[ADD LNY CODE]',
     hook: 'Lunar New Year without the flush — first time ever 🧧',
-    shoot: 'Warm LNY aesthetic — red, gold, family celebration. Could be UGC. Post LNY eve for max emotional reach. Use code LNY25.',
+    shoot: 'Warm LNY aesthetic — red, gold, family celebration. Could be UGC. Post LNY eve for max emotional reach.',
     caption: `Lunar New Year without the flush — first time in my life 🧧
 
 Eight courses. Multiple toasts with the elders. Baijiu and beer and champagne.
@@ -381,15 +417,15 @@ I stayed present the whole meal. Made every toast. My grandma asked why I seemed
 
 That's the whole point. 🥂
 
-→ Link in bio. Use code LNY25 for 25% off.
+→ Link in bio. Use code [ADD LNY CODE] for 25% off.
 
 #LunarNewYear #ChineseNewYear #AAPI #ALDH2 #AsianGlow #Joyn #CelebrateFreely`,
   },
   {
     id:14, day:14, week:2, platform:'Instagram', format:"Valentine's Day Post",
-    promoCode: 'LOVE25',
+    promoCode: '[ADD CODE]',
     hook: "Valentine's Day with confidence you've never had before 💛",
-    shoot: 'Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work. Use code LOVE25.',
+    shoot: 'Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work.',
     caption: `Valentine's Day with confidence you've never had before 💛
 
 To everyone who's ever ordered sparkling water on a date because one drink would end the night —
@@ -404,23 +440,22 @@ Two capsules. Thirty minutes. Show up fully.
 
 Happy Valentine's Day. You deserve it. 🍷
 
-Use code LOVE25 → link in bio 🧡
+Use code [ADD CODE] → link in bio 🧡
 
 #Joyn #ValentinesDay #ALDH2 #AlcoholFlush #ConfidenceInACapsule #DateNight`,
   },
   {
     id:15, day:15, week:3, platform:'TikTok', format:'Expert Review',
+    warn: 'Template post — replace with a real medical advisor\'s actual words. Get written sign-off before publishing. Never fabricate expert endorsements — this is an FTC violation.',
     hook: "Asked a doctor to review Joyn — here's what she said 🩺",
     shoot: 'Credible, calm delivery to camera. No lab coat required. Could be voiceover with ingredient text on screen. Do NOT be salesy — let the science speak.',
     caption: `Asked a doctor to review Joyn — here's what she said 🩺
 
-We sent our full formula to a board-certified physician specializing in metabolic health.
+We sent our full formula to [Dr. Name, Credentials — e.g. "Dr. Jane Park, MD, metabolic health"].
 
 Her response:
 
-"The approach of directly supporting ALDH2 enzyme activity is scientifically sound. This is categorically different from the antacid workarounds most people use. The ingredient profile is thoughtfully assembled."
-
-She also said: "I wish more supplements were this transparent about their mechanism."
+"[Direct quote — her own words. Get written approval before publishing.]"
 
 We're not a drug. We're not medical advice. But we are built on real science.
 
@@ -528,9 +563,9 @@ Joyn. Confidence in a capsule. 🧡
   },
   {
     id:21, day:21, week:3, platform:'TikTok', format:'Lifestyle Video',
-    promoCode: 'SPRING15',
+    promoCode: '[ADD CODE]',
     hook: 'Spring break. No flush edition. 🌴',
-    shoot: 'Fun, energetic spring break energy. Trending audio. Light and summery edit. Fast cuts. This is an ad-adjacent organic post. Use code SPRING15.',
+    shoot: 'Fun, energetic spring break energy. Trending audio. Light and summery edit. Fast cuts. This is an ad-adjacent organic post.',
     caption: `Spring break is almost here and for the first time you don't have to choose between having fun and hiding your face 🌴
 
 No more watching your phone camera to check how red you are.
@@ -541,24 +576,24 @@ Spring 2026: you're going. You're staying. You're present.
 
 Two capsules. Thirty minutes. That's it.
 
-Use code SPRING15 for 15% off → link in bio 🧡
+Use code [ADD CODE] for 15% off → link in bio 🧡
 
 #SpringBreak #AlcoholFlush #ALDH2 #AsianGlow #Joyn #CelebrateFully #ConfidenceInACapsule`,
   },
   {
     id:22, day:22, week:4, platform:'Instagram', format:'Community Spotlight',
-    warn: 'Template stories — replace Daniel, Jenny, Marcus, and "anonymous" with real customers who have given explicit permission to share. Collect real DMs first, then build this post.',
+    warn: 'Template post — collect real DM stories before building this. Post an Instagram Story asking followers to share their Joyn moment. Get explicit written permission from each person. Then replace every [placeholder] below with their real words.',
     hook: "You sent us your stories this month. We can't stop reading them. 🧡",
-    shoot: 'Collage of DM screenshots (with permission) or quote cards on Joyn cream background. Warm, grateful energy. Real names or anonymous — ask first.',
+    shoot: 'Collage of real DM screenshots (with permission) or quote cards on Joyn cream background. Warm, grateful energy. Real names or anonymous — always ask first.',
     caption: `You sent us your stories this month. We can't stop reading them. 🧡
 
-"I went to my first work happy hour in 4 years." — Daniel, 29
+"[Customer quote 1]" — [Name, Age or anonymous]
 
-"I finally said yes to wine at my in-laws' dinner." — Jenny, 34
+"[Customer quote 2]" — [Name, Age or anonymous]
 
-"I stayed until midnight at my own birthday party for the first time." — Marcus, 27
+"[Customer quote 3]" — [Name, Age or anonymous]
 
-"My boyfriend doesn't know yet. He just noticed I seem happier." — anonymous
+"[Customer quote 4]" — [Name or anonymous]
 
 This is why we built Joyn. Not for the product — for these moments.
 
@@ -651,22 +686,22 @@ Drop your story below 👇
   },
   {
     id:27, day:27, week:4, platform:'TikTok', format:'Entertainment',
-    promoCode: 'CELEB15',
+    promoCode: '[ADD CODE]',
     hook: "Rating celebrity flush moments they definitely didn't want us to see 😭",
-    shoot: 'Highly entertaining — find publicly available clips. Add comedic commentary. High share format. Frame it as solidarity, not mockery.',
+    shoot: 'Entertaining — use publicly available footage or general B-roll. Do NOT name specific individuals without legal review first. Frame everything as solidarity, not mockery. High share format.',
     caption: `Rating celebrity flush moments they definitely didn't want us to see 😭
 
-(Solidarity, not mockery — these are real people with real ALDH2 deficiency)
+(Solidarity, not mockery — ALDH2 affects everyone regardless of fame or following)
 
-⭐ Constance Wu at the SAG Awards — girl, we see you
-⭐ Every awards show champagne toast, front row, cameras everywhere
-⭐ That viral red-face clip from the Met Gala... you know the one
+⭐ That awards show toast where someone's face told a whole other story
+⭐ Every red carpet open bar moment caught in 4K... front row... cameras everywhere
+⭐ The group photo at the after-party that lives rent-free in their heads
 
 The difference between them and you: they had stylists, PRs, and makeup artists on standby.
 
 You just have Joyn.
 
-Code CELEB15 → link in bio 🧡
+Code [ADD CODE] → link in bio 🧡
 
 #Joyn #AsianGlow #ALDH2 #TikTokFun #AlcoholFlush #ConfidenceInACapsule #AsianAmerican`,
   },
@@ -800,6 +835,8 @@ export default function Home() {
 
   return (
     <main>
+
+      <SetupBanner />
 
       {/* ── TODAY ────────────────────────────────────────────────────── */}
       <section id="today" className="section-anchor">
