@@ -74,6 +74,31 @@ function PostedBtn({ id, posted, toggle }: { id: number; posted: Set<number>; to
   )
 }
 
+function WarnBanner({ warn, promoCode }: { warn?: string; promoCode?: string }) {
+  return (
+    <>
+      {warn && (
+        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <span className="shrink-0 text-sm mt-0.5">⚠️</span>
+          <div>
+            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Before you post</p>
+            <p className="text-xs text-amber-800 font-medium leading-relaxed">{warn}</p>
+          </div>
+        </div>
+      )}
+      {promoCode && (
+        <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Promo Code</span>
+            <span className="font-black text-[#0a0a0a] text-sm tracking-wide">{promoCode}</span>
+          </div>
+          <span className="text-[10px] text-orange-400 font-semibold">Verify active in store before posting</span>
+        </div>
+      )}
+    </>
+  )
+}
+
 function ShootBrief({ text, dark = false }: { text: string; dark?: boolean }) {
   return (
     <div className={`flex items-start gap-2 border-l-[3px] border-[#FD5C1E] rounded-r-xl px-4 py-3 ${dark ? 'bg-amber-950/40 border-amber-700/40' : 'bg-orange-50'}`}>
@@ -85,7 +110,7 @@ function ShootBrief({ text, dark = false }: { text: string; dark?: boolean }) {
 
 // ── data ──────────────────────────────────────────────────────────────────────
 type Platform = 'TikTok' | 'Instagram' | 'Pinterest'
-type Post = { id: number; day: number; week: 1|2|3|4; platform: Platform; format: string; hook: string; shoot: string; caption: string }
+type Post = { id: number; day: number; week: 1|2|3|4; platform: Platform; format: string; hook: string; shoot: string; caption: string; warn?: string; promoCode?: string }
 
 const WEEK_THEMES = ['Launch + Science', 'Social Proof', 'Community + Founder', 'Milestone + Scale']
 
@@ -194,6 +219,7 @@ I didn't tell him why. I didn't have to.
   },
   {
     id:6, day:6, week:1, platform:'TikTok', format:'Short Hook',
+    promoCode: 'JOYN15',
     hook: 'Red wine. Not red face. 🍷',
     shoot: 'Short, punchy — under 20 seconds. B-roll of someone enjoying wine at dinner, looking relaxed. Text overlay only. No voiceover needed.',
     caption: `Red wine. Not red face. 🍷
@@ -317,6 +343,8 @@ I was just there. Fully.
   },
   {
     id:12, day:12, week:2, platform:'Instagram', format:'Quote Card',
+    warn: 'Template quote — replace "Sarah, 32" with a real verified customer before posting. DM customers who\'ve left positive reviews and ask permission to use their words publicly.',
+    promoCode: 'SARAH15',
     hook: '"I stayed until midnight for the first time." — Sarah, 32',
     shoot: 'Clean quote card on Joyn orange background. Or a warm candid celebration photo with the quote overlaid. Let the quote do all the work.',
     caption: `"I stayed until midnight for the first time." — Sarah, 32 🥂
@@ -337,6 +365,7 @@ Real review. Real customer.
   },
   {
     id:13, day:13, week:2, platform:'Instagram', format:'Cultural Moment',
+    promoCode: 'LNY25',
     hook: 'Lunar New Year without the flush — first time ever 🧧',
     shoot: 'Warm LNY aesthetic — red, gold, family celebration. Could be UGC. Post LNY eve for max emotional reach. Use code LNY25.',
     caption: `Lunar New Year without the flush — first time in my life 🧧
@@ -358,6 +387,7 @@ That's the whole point. 🥂
   },
   {
     id:14, day:14, week:2, platform:'Instagram', format:"Valentine's Day Post",
+    promoCode: 'LOVE25',
     hook: "Valentine's Day with confidence you've never had before 💛",
     shoot: 'Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work. Use code LOVE25.',
     caption: `Valentine's Day with confidence you've never had before 💛
@@ -498,6 +528,7 @@ Joyn. Confidence in a capsule. 🧡
   },
   {
     id:21, day:21, week:3, platform:'TikTok', format:'Lifestyle Video',
+    promoCode: 'SPRING15',
     hook: 'Spring break. No flush edition. 🌴',
     shoot: 'Fun, energetic spring break energy. Trending audio. Light and summery edit. Fast cuts. This is an ad-adjacent organic post. Use code SPRING15.',
     caption: `Spring break is almost here and for the first time you don't have to choose between having fun and hiding your face 🌴
@@ -516,6 +547,7 @@ Use code SPRING15 for 15% off → link in bio 🧡
   },
   {
     id:22, day:22, week:4, platform:'Instagram', format:'Community Spotlight',
+    warn: 'Template stories — replace Daniel, Jenny, Marcus, and "anonymous" with real customers who have given explicit permission to share. Collect real DMs first, then build this post.',
     hook: "You sent us your stories this month. We can't stop reading them. 🧡",
     shoot: 'Collage of DM screenshots (with permission) or quote cards on Joyn cream background. Warm, grateful energy. Real names or anonymous — ask first.',
     caption: `You sent us your stories this month. We can't stop reading them. 🧡
@@ -619,6 +651,7 @@ Drop your story below 👇
   },
   {
     id:27, day:27, week:4, platform:'TikTok', format:'Entertainment',
+    promoCode: 'CELEB15',
     hook: "Rating celebrity flush moments they definitely didn't want us to see 😭",
     shoot: 'Highly entertaining — find publicly available clips. Add comedic commentary. High share format. Frame it as solidarity, not mockery.',
     caption: `Rating celebrity flush moments they definitely didn't want us to see 😭
@@ -756,7 +789,7 @@ export default function Home() {
   }
 
   const todayPosts  = POSTS.filter(p => p.day === TODAY)
-  const upNext      = POSTS.filter(p => p.day > TODAY && p.day <= TODAY + 3)
+  const upNext      = POSTS.filter(p => p.day > TODAY && p.day <= TODAY + 5)
   const selPosts    = sel ? POSTS.filter(p => p.day === sel) : []
   const weekNum     = IN_FEB ? Math.min(Math.ceil(_d / 7), 4) : 1
   const totalPosted = posted.size
@@ -831,6 +864,7 @@ export default function Home() {
                       &ldquo;{p.hook}&rdquo;
                     </h2>
                     <ShootBrief text={p.shoot} dark />
+                    <WarnBanner warn={p.warn} promoCode={p.promoCode} />
                     <div className="text-sm text-gray-400 whitespace-pre-line leading-relaxed mt-5 mb-6">
                       {p.caption}
                     </div>
@@ -846,7 +880,7 @@ export default function Home() {
             {IN_FEB && upNext.length > 0 && (
               <div className="mt-8">
                 <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-4">Up Next</p>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid md:grid-cols-5 gap-3">
                   {upNext.map(u => (
                     <div key={u.id} className="border border-white/[0.07] rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -959,6 +993,7 @@ export default function Home() {
                     </div>
                     <h4 className="font-black text-[#0a0a0a] text-base mb-4 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
                     <ShootBrief text={p.shoot} />
+                    <WarnBanner warn={p.warn} promoCode={p.promoCode} />
                     <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed mt-4 mb-5">{p.caption}</div>
                     <CopyFull text={p.caption} />
                   </div>
@@ -1013,6 +1048,7 @@ export default function Home() {
                   </div>
                   <h3 className="font-black text-[#0a0a0a] text-lg leading-snug">&ldquo;{cap.hook}&rdquo;</h3>
                   <ShootBrief text={cap.shoot} />
+                  <WarnBanner warn={cap.warn} promoCode={cap.promoCode} />
                   <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed flex-1">{cap.caption}</div>
                   <CopyFull text={cap.caption} />
                 </div>
@@ -1196,10 +1232,23 @@ export default function Home() {
             <div className="text-white font-black">JOYN · 2026 Social Playbook</div>
             <div className="text-gray-600 text-xs mt-1">28 posts · all platforms · copy-ready · progress saved in your browser</div>
           </div>
-          <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
-            className="text-[#FD5C1E] text-sm font-bold hover:underline">
-            joynthefun.com ↗
-          </a>
+          <div className="flex items-center gap-5">
+            <button
+              onClick={() => {
+                if (confirm('Reset all posted progress? This cannot be undone.')) {
+                  localStorage.removeItem('joyn-posted')
+                  setPosted(new Set())
+                }
+              }}
+              className="text-gray-600 text-xs font-semibold hover:text-gray-400 transition-colors"
+            >
+              Reset progress
+            </button>
+            <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
+              className="text-[#FD5C1E] text-sm font-bold hover:underline">
+              joynthefun.com ↗
+            </a>
+          </div>
         </div>
       </footer>
 
