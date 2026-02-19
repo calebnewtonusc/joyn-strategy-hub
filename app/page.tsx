@@ -103,8 +103,8 @@ function CopyFull({ text }: { text: string }) {
   const [ok, setOk] = useState(false)
   const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
   return (
-    <button onClick={go} className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wide transition-all ${ok ? 'bg-green-500 text-white' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18] btn-brand'}`}>
-      {ok ? '✓ COPIED TO CLIPBOARD' : 'COPY CAPTION'}
+    <button onClick={go} className={`w-full py-2 rounded-lg text-xs font-medium transition-all ${ok ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-white text-gray-400 border border-gray-200 hover:border-gray-300 hover:text-gray-600'}`}>
+      {ok ? 'Copied' : 'Copy caption'}
     </button>
   )
 }
@@ -113,8 +113,8 @@ function CopyAll({ text }: { text: string }) {
   const [ok, setOk] = useState(false)
   const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
   return (
-    <button onClick={go} className={`w-full py-3 rounded-xl font-black text-sm tracking-wide transition-all ${ok ? 'bg-green-500 text-white' : 'bg-[#0a0a0a] text-white hover:bg-gray-800'}`}>
-      {ok ? '✓ COPIED' : 'COPY ALL HASHTAGS'}
+    <button onClick={go} className={`w-full py-2 rounded-lg text-xs font-medium transition-all ${ok ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-white text-gray-400 border border-gray-200 hover:border-gray-300 hover:text-gray-600'}`}>
+      {ok ? 'Copied' : 'Copy hashtags'}
     </button>
   )
 }
@@ -137,9 +137,8 @@ function PostedBtn({ id, is_posted, toggle }: { id: string; is_posted: boolean; 
   return (
     <button
       onClick={() => toggle(id)}
-      className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${is_posted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'}`}
-      style={is_posted ? { boxShadow: '0 2px 8px rgba(34,197,94,0.2)' } : undefined}>
-      {is_posted ? '✓ Posted' : '○ Mark posted'}
+      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all shrink-0 ${is_posted ? 'bg-green-50 text-green-600 border border-green-100' : 'border border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'}`}>
+      {is_posted ? 'Posted' : 'Mark posted'}
     </button>
   )
 }
@@ -148,21 +147,16 @@ function WarnBanner({ warn, promo_code }: { warn?: string; promo_code?: string }
   return (
     <>
       {warn && (
-        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-3">
-          <span className="shrink-0 text-sm mt-0.5">⚠️</span>
-          <div>
-            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Before you post</p>
-            <p className="text-xs text-amber-800 font-medium leading-relaxed">{warn}</p>
-          </div>
+        <div className="bg-amber-50 border border-amber-100 rounded-lg px-3.5 py-3 mt-3">
+          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">Before you post</p>
+          <p className="text-xs text-amber-800 leading-relaxed">{warn}</p>
         </div>
       )}
       {promo_code && (
-        <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 mt-3 gap-2 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Promo Code</span>
-            <span className="font-black text-[#0a0a0a] text-sm tracking-wide">{promo_code}</span>
-          </div>
-          <span className="text-[10px] text-orange-400 font-semibold">Verify active in store before posting</span>
+        <div className="flex items-center gap-2 mt-3">
+          <span className="text-[10px] text-gray-400 font-medium">Promo code</span>
+          <code className="text-xs font-mono font-semibold text-[#FD5C1E]">{promo_code}</code>
+          <span className="text-[9px] text-gray-300 ml-auto">Verify active</span>
         </div>
       )}
     </>
@@ -171,9 +165,9 @@ function WarnBanner({ warn, promo_code }: { warn?: string; promo_code?: string }
 
 function ShootBrief({ text }: { text: string }) {
   return (
-    <div className="flex items-start gap-2 border-l-[3px] border-[#FD5C1E] bg-orange-50 rounded-r-xl px-4 py-3 mt-3">
-      <span className="shrink-0 text-sm">📱</span>
-      <p className="text-xs font-semibold leading-relaxed text-[#c44a18]">{text}</p>
+    <div className="pl-3 border-l-2 border-gray-200 mt-3">
+      <p className="text-[10px] text-gray-400 font-medium mb-0.5">Shoot</p>
+      <p className="text-xs text-gray-500 leading-relaxed">{text}</p>
     </div>
   )
 }
@@ -181,21 +175,18 @@ function ShootBrief({ text }: { text: string }) {
 // ── sync badge ────────────────────────────────────────────────────────────────
 function SyncBadge({ active }: { active: boolean }) {
   if (!active) return (
-    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-500 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-      Local only
-    </div>
+    <span className="text-[10px] text-gray-400 font-medium">Local</span>
   )
   return (
-    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-      Team sync
+    <div className="flex items-center gap-1.5 text-[10px] font-medium text-green-500">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+      Live sync
     </div>
   )
 }
 
 // ── PostEditor modal ──────────────────────────────────────────────────────────
-const IL = 'text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5'
+const IL = 'text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1.5'
 const II = 'w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors'
 const IT = 'w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors resize-none'
 
@@ -331,10 +322,10 @@ function NoteArea({ note, onSave }: { note: string; onSave: (t: string) => void 
   }
   return (
     <div className="mt-3 pt-3 border-t border-gray-100">
-      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
-        <span className="text-sm">{hasNote ? '📝' : '+'}</span>
-        {hasNote ? 'Team note' : 'Add team note'}
-        {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors">
+        <span className="text-gray-300">{hasNote ? '–' : '+'}</span>
+        {hasNote ? 'Team note' : 'Add note'}
+        {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0" />}
       </button>
       {open && (
         <textarea value={val} onChange={e => handleChange(e.target.value)}
@@ -347,15 +338,16 @@ function NoteArea({ note, onSave }: { note: string; onSave: (t: string) => void 
 
 // ── SetupBanner ───────────────────────────────────────────────────────────────
 function SetupBanner({ hasSupabase }: { hasSupabase: boolean }) {
-  const [dismissed, setDismissed] = useState(true)
-  useEffect(() => { setDismissed(localStorage.getItem('joyn-setup-done') === '1') }, [])
+  const [dismissed, setDismissed] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('joyn-setup-done') === '1' : true
+  )
   if (dismissed) return null
   return (
     <div className="bg-[#003882] border-b border-blue-900">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-16 py-5">
         <div className="flex items-start gap-6 flex-wrap">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-3">Before your first post</p>
+            <p className="text-[10px] font-medium text-blue-300 uppercase tracking-wide mb-3">Before your first post</p>
             <div className="grid sm:grid-cols-2 gap-x-10 gap-y-2.5">
               {([
                 !hasSupabase
@@ -605,24 +597,16 @@ export default function Home() {
         <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-16 py-4 sm:py-5">
           <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-1">Today</p>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#0a0a0a] leading-none">
-                {now ? `${DAY_FULL[now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}` : '—'}
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0a0a0a] leading-none">
+                {now ? `${DAY_FULL[now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}` : '—'}
               </h1>
             </div>
-            <div className="flex items-center gap-3 sm:gap-5 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
               <SyncBadge active={USE_SB} />
-              {noteCount > 0 && (
-                <div className="text-right">
-                  <div className="text-xl font-black text-[#003882]">{noteCount}</div>
-                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">notes</div>
-                </div>
-              )}
-              <div className="text-right">
-                <div className="text-xl font-black text-[#0a0a0a]">{totalPosted}<span className="text-sm text-gray-300 font-normal">/{totalPosts}</span></div>
-                <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">published</div>
-              </div>
-              <div className="w-20 sm:w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <span className="text-sm text-gray-400">
+                <span className="font-semibold text-[#0a0a0a]">{totalPosted}</span>/{totalPosts} posted
+              </span>
+              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-[#FD5C1E] rounded-full transition-all duration-500"
                   style={{ width: totalPosts ? `${(totalPosted / totalPosts) * 100}%` : '0%' }} />
               </div>
@@ -637,7 +621,7 @@ export default function Home() {
               <div className="bg-white border border-gray-200 rounded-2xl p-8 sm:p-10 text-center mb-6">
                 {now ? (
                   <>
-                    <p className="text-lg font-black text-[#0a0a0a] mb-2">No posts scheduled today.</p>
+                    <p className="text-base font-semibold text-[#0a0a0a] mb-2">No posts scheduled today.</p>
                     <p className="text-gray-400 text-sm mb-4">Use the calendar below to see what&apos;s coming up, or add a post for today.</p>
                     <button onClick={() => setAddingPost(blankPost(todayStr))}
                       className="bg-[#FD5C1E] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] btn-brand">
@@ -658,17 +642,17 @@ export default function Home() {
                   style={!p.is_posted ? { borderLeftColor: PC[p.platform] } : undefined}>
                   <div className="p-4 sm:p-6">
                     <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
                         <Plat p={p.platform} />
-                        {p.format && <span className="inline-flex items-center text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">{p.format}</span>}
-                        {p.note?.trim() && <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>}
+                        {p.format && <span className="text-xs text-gray-400">{p.format}</span>}
+                        {p.note?.trim() && <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => setEditingPost(p)} className="text-xs font-bold text-gray-400 hover:text-[#FD5C1E] transition-colors px-2 py-1 border border-gray-200 rounded-lg hover:border-[#FD5C1E]">Edit</button>
+                        <button onClick={() => setEditingPost(p)} className="text-xs font-medium text-gray-400 hover:text-[#FD5C1E] transition-colors px-2 py-1 border border-gray-200 rounded-lg hover:border-[#FD5C1E]">Edit</button>
                         <PostedBtn id={p.id} is_posted={p.is_posted} toggle={togglePosted} />
                       </div>
                     </div>
-                    <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-[#0a0a0a] mb-3 leading-tight">&ldquo;{p.hook}&rdquo;</h2>
+                    <h2 className="text-lg sm:text-xl font-semibold text-[#0a0a0a] mb-3 leading-snug">&ldquo;{p.hook}&rdquo;</h2>
                     <ShootBrief text={p.shoot} />
                     <WarnBanner warn={p.warn} promo_code={p.promo_code} />
                     <div className="mt-4">
@@ -684,7 +668,7 @@ export default function Home() {
             {/* Up Next */}
             {upcomingPosts.length > 0 && (
               <div className="mt-8">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Coming up</p>
+                <p className="text-xs text-gray-400 font-medium mb-3">Coming up</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {upcomingPosts.map((u, i) => (
                     <motion.button key={u.id}
@@ -708,15 +692,14 @@ export default function Home() {
       </section>
 
       {/* ── CALENDAR ───────────────────────────────────────────────────── */}
-      <section id="calendar" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 bg-[#FFF8F4] border-b border-orange-100">
+      <section id="calendar" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
           <div className="flex items-center justify-between mb-6 sm:mb-8 flex-wrap gap-4">
             <div>
-              <p className="text-xs font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-2">Content Calendar</p>
               <div className="flex items-center gap-3">
-                <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-orange-100 hover:border-[#FD5C1E] text-gray-500 hover:text-[#FD5C1E] transition-all text-lg">‹</button>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#0a0a0a]">{monthLabel}</h2>
-                <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-orange-100 hover:border-[#FD5C1E] text-gray-500 hover:text-[#FD5C1E] transition-all text-lg">›</button>
+                <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:border-[#FD5C1E] text-gray-400 hover:text-[#FD5C1E] transition-all text-lg">‹</button>
+                <h2 className="text-xl sm:text-2xl font-semibold text-[#0a0a0a]">{monthLabel}</h2>
+                <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:border-[#FD5C1E] text-gray-400 hover:text-[#FD5C1E] transition-all text-lg">›</button>
                 {now && (calYear !== now.getFullYear() || calMonth !== now.getMonth()) && (
                   <button onClick={() => setViewMonth({ year: now.getFullYear(), month: now.getMonth() })}
                     className="text-xs font-bold text-[#FD5C1E] hover:underline">Today</button>
@@ -732,10 +715,10 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
-            <div className="grid grid-cols-7 border-b border-orange-50">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="grid grid-cols-7 border-b border-gray-50">
               {DAY_NAMES.map((d, i) => (
-                <div key={i} className="py-2 sm:py-3 text-center text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest">
+                <div key={'dh-' + i} className="py-2 sm:py-3 text-center text-[10px] sm:text-xs font-medium text-gray-300 uppercase tracking-widest">
                   <span className="hidden sm:inline">{DAY_FULL[i]}</span>
                   <span className="sm:hidden">{d}</span>
                 </div>
@@ -751,11 +734,11 @@ export default function Home() {
                 const isSel    = ds === selDate
                 const allDone  = dayPosts.length > 0 && dayPosts.every(p => p.is_posted)
                 return (
-                  <div key={i} className={`min-h-[56px] sm:min-h-[88px] border-b border-r border-orange-50 last:border-r-0 transition-all ${isValid ? (isSel ? 'ring-2 ring-inset ring-[#FD5C1E]' : '') : 'bg-gray-50/30'}`}>
+                  <div key={'cell-' + i} className={`min-h-[56px] sm:min-h-[88px] border-b border-r border-gray-50 last:border-r-0 transition-all ${isValid ? (isSel ? 'ring-2 ring-inset ring-[#FD5C1E]' : '') : 'bg-gray-50/30'}`}>
                     {isValid && (
-                      <button className={`w-full h-full p-1.5 sm:p-2.5 text-left ${isToday ? 'bg-orange-50/60' : 'hover:bg-orange-50/40'} transition-all`}
+                      <button className={`w-full h-full p-1.5 sm:p-2.5 text-left ${isToday ? 'bg-[#FD5C1E]/5' : 'hover:bg-gray-50/60'} transition-all`}
                         onClick={() => setSelDate(ds === selDate ? null : ds)}>
-                        <div className={`text-[10px] sm:text-xs font-black mb-1 sm:mb-1.5 flex items-center gap-1 ${isToday ? 'text-[#FD5C1E]' : 'text-gray-300'}`}>
+                        <div className={`text-[10px] sm:text-xs font-semibold mb-1 sm:mb-1.5 flex items-center gap-1 ${isToday ? 'text-[#FD5C1E]' : 'text-gray-300'}`}>
                           {dayNum}
                           {isToday && <span className="hidden sm:inline text-[9px] bg-[#FD5C1E] text-white px-1 py-0.5 rounded font-black leading-none">TODAY</span>}
                           {allDone && <span className="text-[9px] bg-green-500 text-white px-1 py-0.5 rounded font-black leading-none">✓</span>}
@@ -780,16 +763,16 @@ export default function Home() {
 
           <div className="mt-3 flex justify-end">
             <button onClick={() => setAddingPost(blankPost(selDate ?? todayStr))}
-              className="flex items-center gap-2 text-sm font-bold text-[#FD5C1E] hover:underline">
+              className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-[#FD5C1E] transition-colors">
               + Add Post
             </button>
           </div>
 
           {selDate && (
-            <div className="mt-4 bg-white border-2 border-[#FD5C1E] rounded-2xl overflow-hidden">
-              <div className="px-4 sm:px-6 py-4 border-b border-orange-100 flex items-center justify-between flex-wrap gap-3">
+            <div className="mt-4 bg-white border border-gray-200 rounded-2xl overflow-hidden">
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-black text-[#0a0a0a] text-base sm:text-lg">{formatDisplayDate(selDate)}</h3>
+                  <h3 className="font-semibold text-[#0a0a0a] text-base">{formatDisplayDate(selDate)}</h3>
                   {selDate === todayStr && <span className="text-xs bg-[#FD5C1E] text-white px-2.5 py-0.5 rounded-full font-black">TODAY</span>}
                 </div>
                 <div className="flex items-center gap-3">
@@ -810,7 +793,7 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                <div className="divide-y divide-orange-50">
+                <div className="divide-y divide-gray-50">
                   {selPosts.map(p => (
                     <div key={p.id} className="p-4 sm:p-6">
                       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -823,7 +806,7 @@ export default function Home() {
                           <PostedBtn id={p.id} is_posted={p.is_posted} toggle={togglePosted} />
                         </div>
                       </div>
-                      <h4 className="font-black text-[#0a0a0a] text-base mb-3 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
+                      <h4 className="font-semibold text-[#0a0a0a] text-sm mb-3 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
                       <ShootBrief text={p.shoot} />
                       <WarnBanner warn={p.warn} promo_code={p.promo_code} />
                       <div className="mt-4">
@@ -843,17 +826,13 @@ export default function Home() {
       {/* ── CAPTION LIBRARY ─────────────────────────────────────────────── */}
       <section id="captions" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
-          <div className="flex items-end justify-between mb-2 flex-wrap gap-4">
-            <div>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Caption Library</p>
-              <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a]">{totalPosts} captions. All editable.</h2>
-            </div>
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <h2 className="text-2xl font-bold text-[#0a0a0a]">Captions <span className="text-gray-300 font-normal text-xl">({totalPosts})</span></h2>
             <button onClick={() => setAddingPost(blankPost())}
-              className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] btn-brand whitespace-nowrap">
+              className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg font-medium text-sm hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all whitespace-nowrap">
               + Add Post
             </button>
           </div>
-          <p className="text-gray-400 text-sm sm:text-base mb-6">Click Edit on any card to change anything. {USE_SB ? 'Changes sync to all team members instantly.' : 'Changes save to your browser.'}</p>
 
           <div className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 mb-8 flex flex-col sm:flex-row gap-3">
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -891,18 +870,18 @@ export default function Home() {
                 className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col card-hover ${cap.is_posted ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100'}`}
                 style={!cap.is_posted ? { borderLeftColor: PC[cap.platform] } : undefined}>
                 <div className="p-4 sm:p-5 flex flex-col flex-1">
-                  <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
                       <Plat p={cap.platform} />
-                      <span className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">{formatDisplayDate(cap.date)}</span>
-                      {cap.format && <span className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">{cap.format}</span>}
+                      <span className="text-xs text-gray-400">{formatDisplayDate(cap.date)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <button onClick={() => setEditingPost(cap)} className="text-[10px] font-bold text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
+                      <button onClick={() => setEditingPost(cap)} className="text-[10px] font-medium text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
                       <PostedBtn id={cap.id} is_posted={cap.is_posted} toggle={togglePosted} />
                     </div>
                   </div>
-                  <h3 className="font-black text-[#0a0a0a] text-sm leading-snug mb-3">&ldquo;{cap.hook}&rdquo;</h3>
+                  {cap.format && <p className="text-[10px] text-gray-400 font-medium mb-1.5">{cap.format}</p>}
+                  <h3 className="font-semibold text-[#0a0a0a] text-sm leading-snug mb-3">&ldquo;{cap.hook}&rdquo;</h3>
                   {cap.shoot && <ShootBrief text={cap.shoot} />}
                   <WarnBanner warn={cap.warn} promo_code={cap.promo_code} />
                   <div className="mt-3 flex-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">{cap.caption}</div>
@@ -918,8 +897,7 @@ export default function Home() {
       {/* ── HASHTAGS ────────────────────────────────────────────────────── */}
       <section id="hashtags" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 bg-gray-50 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Hashtag Sets</p>
-          <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a] mb-8 sm:mb-10">Six packs. Copy and go.</h2>
+          <h2 className="text-2xl font-bold text-[#0a0a0a] mb-8">Hashtags</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {HASHTAGS.map((set, i) => {
               const raw = set.tags.includes(',') ? set.tags.split(', ') : set.tags.split(' ')
@@ -930,7 +908,7 @@ export default function Home() {
                   transition={{ duration: 0.4, delay: i * 0.07, ease: EASE }}
                   className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col card-hover">
                   <div className="p-5 flex-1">
-                    <h3 className="font-black text-[#0a0a0a] mb-1">{set.name}</h3>
+                    <h3 className="font-semibold text-[#0a0a0a] mb-1">{set.name}</h3>
                     <p className="text-xs text-gray-400 mb-4">{set.desc}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {raw.slice(0, 8).map(t => (
@@ -950,9 +928,8 @@ export default function Home() {
       {/* ── ADS ─────────────────────────────────────────────────────────── */}
       <section id="ads" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 bg-[#0a0a0a] border-b border-gray-800">
         <div className="max-w-screen-xl mx-auto">
-          <p className="text-xs font-black text-gray-600 uppercase tracking-[0.2em] mb-3">Ad Copy</p>
-          <h2 className="text-2xl sm:text-4xl font-black text-white mb-3">Four complete ad sets.</h2>
-          <p className="text-gray-500 text-base sm:text-lg mb-10 sm:mb-12">Copy-ready for Meta Ads Manager and TikTok Ads.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Ad Copy</h2>
+          <p className="text-gray-500 text-sm mb-10">Meta and TikTok — copy-ready.</p>
           <div className="grid md:grid-cols-2 gap-6">
             {ADS.map(ad => (
               <div key={ad.id} className="border border-white/10 rounded-2xl overflow-hidden">
@@ -992,11 +969,10 @@ export default function Home() {
       {/* ── BRAND ───────────────────────────────────────────────────────── */}
       <section id="brand" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16">
         <div className="max-w-screen-xl mx-auto">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Brand Kit</p>
-          <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a] mb-10 sm:mb-12">How Joyn looks. How Joyn sounds.</h2>
+          <h2 className="text-2xl font-bold text-[#0a0a0a] mb-10">Brand</h2>
           <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
             <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Colors — click to copy hex</h3>
+              <h3 className="text-xs font-medium text-gray-400 mb-5">Colors — click to copy hex</h3>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {COLORS.map(c => (
                   <button key={c.hex} className="group text-left" onClick={() => navigator.clipboard.writeText(c.hex)}>
@@ -1014,7 +990,7 @@ export default function Home() {
                 <div className="h-8 rounded-lg bg-gradient-to-r from-[#FD5C1E] to-[#D72C0D]" />
                 <div className="h-8 rounded-lg bg-gradient-to-r from-[#003882] to-[#0052CC]" />
               </div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Typography — Inter</h3>
+              <h3 className="text-xs font-medium text-gray-400 mb-5">Typography — Inter</h3>
               <div className="space-y-3">
                 {[
                   { label: 'Hero — Black 900', cls: 'text-3xl font-black text-[#0a0a0a] leading-none', t: 'Confidence.' },
@@ -1030,7 +1006,7 @@ export default function Home() {
               </div>
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Voice — DO / DON&apos;T</h3>
+              <h3 className="text-xs font-medium text-gray-400 mb-5">Voice — DO / DON&apos;T</h3>
               <div className="space-y-3 mb-10">
                 {[
                   ['Confidence in a capsule.', 'We think this might help with redness...'],
@@ -1056,7 +1032,7 @@ export default function Home() {
               </div>
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Tagline Bank</h3>
+              <h3 className="text-xs font-medium text-gray-400 mb-5">Tagline Bank</h3>
               <div className="space-y-0">
                 {TAGLINES.map((t, i) => (
                   <div key={t.line} className="py-4 border-b border-gray-100 last:border-0">
@@ -1082,8 +1058,8 @@ export default function Home() {
       <footer className="px-4 sm:px-6 lg:px-16 py-8 sm:py-10 bg-[#0a0a0a]">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="text-white font-black">JOYN · Social Playbook</div>
-            <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · all platforms · copy-ready · {USE_SB ? 'team sync active' : 'local mode — see /setup'}</div>
+            <div className="text-white font-semibold text-sm">Joyn — 2026 Social Playbook</div>
+            <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · {USE_SB ? 'team sync active' : 'local mode'}</div>
           </div>
           <div className="flex items-center gap-4 sm:gap-5 flex-wrap">
             <button onClick={() => { if (window.confirm('Reset all data? This will delete any custom posts, edits, and progress.')) { localStorage.clear(); window.location.reload() } }}
@@ -1091,7 +1067,7 @@ export default function Home() {
               Reset data
             </button>
             <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
-              className="text-[#FD5C1E] text-sm font-bold hover:underline">
+              className="text-gray-500 text-xs font-medium hover:text-gray-300 transition-colors">
               joynthefun.com ↗
             </a>
           </div>
