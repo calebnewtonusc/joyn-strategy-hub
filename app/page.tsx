@@ -1,17 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
-// ── date ──────────────────────────────────────────────────────────────────────
-const _now   = new Date()
-const _m     = _now.getMonth()   // 1 = Feb
-const _y     = _now.getFullYear()
-const _d     = _now.getDate()
-const IN_FEB = _m === 1 && _y === 2026
-const TODAY  = IN_FEB ? _d : 0
+// ── static constants ───────────────────────────────────────────────────────────
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-const TODAY_STR = IN_FEB
-  ? `${DAY_NAMES[_now.getDay()]}, February ${_d}`
-  : 'February 2026'
 
 // ── components ─────────────────────────────────────────────────────────────
 function Copy({ text, label = 'Copy', variant = 'dark' }: {
@@ -104,6 +95,69 @@ function ShootBrief({ text, dark = false }: { text: string; dark?: boolean }) {
     <div className={`flex items-start gap-2 border-l-[3px] border-[#FD5C1E] rounded-r-xl px-4 py-3 ${dark ? 'bg-amber-950/40 border-amber-700/40' : 'bg-orange-50'}`}>
       <span className="shrink-0 text-sm">📱</span>
       <p className={`text-xs font-semibold leading-relaxed ${dark ? 'text-amber-300/90' : 'text-[#c44a18]'}`}>{text}</p>
+    </div>
+  )
+}
+
+function EditCaption({ id, text, original, onSave, onCancel }: {
+  id: number; text: string; original: string
+  onSave: (id: number, t: string) => void; onCancel: () => void
+}) {
+  const [val, setVal] = useState(text)
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => { ref.current?.focus() }, [])
+  const isEdited = val !== original
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Editing caption</span>
+        {isEdited && (
+          <button onClick={() => setVal(original)} className="text-[10px] text-gray-400 hover:text-gray-600 underline">Reset to original</button>
+        )}
+      </div>
+      <textarea
+        ref={ref}
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        className="w-full text-sm text-gray-800 leading-relaxed bg-white border-2 border-[#FD5C1E] rounded-xl p-4 min-h-[220px] resize-y focus:outline-none font-mono"
+      />
+      <div className="flex gap-2 mt-2">
+        <button onClick={() => onSave(id, val)}
+          className="flex-1 py-2.5 rounded-xl bg-[#FD5C1E] text-white text-sm font-black hover:bg-[#e54d18] transition-all">
+          Save Caption
+        </button>
+        <button onClick={onCancel}
+          className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-gray-400 transition-all">
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function NoteArea({ id, notes, saveNote }: {
+  id: number; notes: Record<number, string>; saveNote: (id: number, t: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [val, setVal] = useState(notes[id] ?? '')
+  useEffect(() => { setVal(notes[id] ?? '') }, [notes, id])
+  const hasNote = !!(notes[id]?.trim())
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100">
+      <button onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+        <span className="text-sm">{hasNote ? '📝' : '+'}</span>
+        {hasNote ? 'Team note' : 'Add team note'}
+        {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
+      </button>
+      {open && (
+        <textarea
+          value={val}
+          onChange={e => { setVal(e.target.value); saveNote(id, e.target.value) }}
+          placeholder="Shoot date, approvals needed, assigned to..."
+          className="mt-2 w-full text-xs text-gray-700 leading-relaxed bg-amber-50 border border-amber-100 rounded-xl p-3 min-h-[72px] resize-none focus:outline-none focus:border-amber-300 placeholder-gray-300"
+        />
+      )}
     </div>
   )
 }
@@ -802,18 +856,39 @@ const TAGLINES = [
 type PF = 'All' | Platform
 
 export default function Home() {
-  const [posted, setPosted] = useState<Set<number>>(new Set())
-  const [sel, setSel] = useState<number | null>(null)
-  const [pf, setPf] = useState<PF>('All')
+  // ── state ────────────────────────────────────────────────────────────────────
+  const [now, setNow]               = useState<Date | null>(null)
+  const [posted, setPosted]         = useState<Set<number>>(new Set())
+  const [edits, setEdits]           = useState<Record<number, string>>({})
+  const [notes, setNotes]           = useState<Record<number, string>>({})
+  const [editing, setEditing]       = useState<number | null>(null)
+  const [sel, setSel]               = useState<number | null>(null)
+  const [pf, setPf]                 = useState<PF>('All')
   const [hidePosted, setHidePosted] = useState(false)
+  const [search, setSearch]         = useState('')
 
+  // ── load from localStorage + set live date ───────────────────────────────────
   useEffect(() => {
+    setNow(new Date())
     try {
-      const s = localStorage.getItem('joyn-posted')
-      if (s) setPosted(new Set(JSON.parse(s)))
+      const p = localStorage.getItem('joyn-posted')
+      if (p) setPosted(new Set(JSON.parse(p)))
+      const e = localStorage.getItem('joyn-edits')
+      if (e) setEdits(JSON.parse(e))
+      const n = localStorage.getItem('joyn-notes')
+      if (n) setNotes(JSON.parse(n))
     } catch {}
   }, [])
 
+  // ── date (client-only — never frozen at build time) ──────────────────────────
+  const IN_FEB   = now ? now.getMonth() === 1 && now.getFullYear() === 2026 : false
+  const TODAY    = IN_FEB && now ? now.getDate() : 0
+  const TODAY_STR = IN_FEB && now
+    ? `${DAY_NAMES[now.getDay()]}, February ${now.getDate()}`
+    : 'February 2026'
+  const weekNum  = IN_FEB && now ? Math.min(Math.ceil(now.getDate() / 7), 4) : 1
+
+  // ── actions ──────────────────────────────────────────────────────────────────
   const togglePosted = (id: number) => {
     setPosted(prev => {
       const next = new Set(prev)
@@ -823,15 +898,33 @@ export default function Home() {
     })
   }
 
+  const getCaption = (p: Post) => edits[p.id] ?? p.caption
+
+  const saveEdit = (id: number, text: string) => {
+    const next = { ...edits, [id]: text }
+    setEdits(next)
+    localStorage.setItem('joyn-edits', JSON.stringify(next))
+    setEditing(null)
+  }
+
+  const saveNote = (id: number, text: string) => {
+    const next = { ...notes, [id]: text }
+    setNotes(next)
+    localStorage.setItem('joyn-notes', JSON.stringify(next))
+  }
+
+  // ── computed ─────────────────────────────────────────────────────────────────
   const todayPosts  = POSTS.filter(p => p.day === TODAY)
   const upNext      = POSTS.filter(p => p.day > TODAY && p.day <= TODAY + 5)
   const selPosts    = sel ? POSTS.filter(p => p.day === sel) : []
-  const weekNum     = IN_FEB ? Math.min(Math.ceil(_d / 7), 4) : 1
   const totalPosted = posted.size
+  const editedCount = Object.keys(edits).length
+  const noteCount   = Object.values(notes).filter(n => n.trim()).length
 
   const filteredLib = POSTS
     .filter(p => pf === 'All' || p.platform === pf)
     .filter(p => !hidePosted || !posted.has(p.id))
+    .filter(p => !search || [p.hook, getCaption(p)].some(t => t.toLowerCase().includes(search.toLowerCase())))
 
   return (
     <main>
@@ -839,75 +932,119 @@ export default function Home() {
       <SetupBanner />
 
       {/* ── TODAY ────────────────────────────────────────────────────── */}
-      <section id="today" className="section-anchor">
+      <section id="today" className="section-anchor border-b border-gray-100">
 
-        {/* Hero */}
-        <div className="bg-[#FD5C1E] px-6 lg:px-16 pt-20 pb-10">
-          <div className="max-w-screen-xl mx-auto">
-            <div className="flex items-end justify-between gap-6 flex-wrap">
-              <div>
-                <p className="text-white/60 text-xs font-black uppercase tracking-[0.25em] mb-3">
-                  {IN_FEB ? `Week ${weekNum} · ${WEEK_THEMES[weekNum - 1]}` : 'February 2026 Playbook'}
-                </p>
-                <h1 className="text-5xl lg:text-7xl font-black text-white leading-none tracking-tight">
-                  {TODAY_STR}
-                </h1>
+        {/* Date + stats bar */}
+        <div className="bg-white border-b border-gray-100 px-6 lg:px-16 py-6">
+          <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-1">
+                {IN_FEB ? `Week ${weekNum} · ${WEEK_THEMES[weekNum - 1]}` : 'February 2026 Playbook'}
+              </p>
+              <h1 className="text-3xl lg:text-4xl font-black text-[#0a0a0a] leading-none">{TODAY_STR}</h1>
+            </div>
+            <div className="flex items-center gap-6 flex-wrap">
+              {editedCount > 0 && (
+                <div className="text-right">
+                  <div className="text-xl font-black text-amber-500">{editedCount}</div>
+                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">edited</div>
+                </div>
+              )}
+              {noteCount > 0 && (
+                <div className="text-right">
+                  <div className="text-xl font-black text-[#003882]">{noteCount}</div>
+                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">notes</div>
+                </div>
+              )}
+              <div className="text-right">
+                <div className="text-xl font-black text-[#0a0a0a]">{totalPosted}<span className="text-sm text-gray-300 font-normal">/28</span></div>
+                <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">published</div>
               </div>
-              <div className="text-right pb-1">
-                <div className="text-5xl lg:text-7xl font-black text-white/20 leading-none">
-                  {totalPosted}<span className="text-3xl">/28</span>
-                </div>
-                <div className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1">posts published</div>
-                <div className="mt-2 w-44 h-1.5 bg-white/20 rounded-full overflow-hidden ml-auto">
-                  <div className="h-full bg-white rounded-full transition-all duration-500"
-                    style={{ width: `${(totalPosted / 28) * 100}%` }} />
-                </div>
+              <div className="w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-[#FD5C1E] rounded-full transition-all duration-500"
+                  style={{ width: `${(totalPosted / 28) * 100}%` }} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Posts */}
-        <div className="bg-[#0a0a0a] px-6 lg:px-16 py-10 border-b border-gray-800">
+        <div className="px-6 lg:px-16 py-8 bg-[#fafafa]">
           <div className="max-w-screen-xl mx-auto">
 
             {!IN_FEB && (
-              <div className="border border-white/10 rounded-2xl p-8 text-center">
-                <p className="text-white font-black text-xl mb-2">February 2026 Content Playbook</p>
-                <p className="text-gray-500 text-sm">28 posts · all platforms · every caption ready to copy</p>
-                <p className="text-gray-600 text-xs mt-3">Use the Calendar and Caption Library below to plan your posts.</p>
+              <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+                <p className="text-[#FD5C1E] text-xs font-black uppercase tracking-widest mb-3">February 2026 Content Playbook</p>
+                <p className="text-2xl font-black text-[#0a0a0a] mb-2">28 posts. Every caption ready.</p>
+                <p className="text-gray-400 text-sm">Browse the Calendar and Caption Library below — click any day or post to see the full copy.</p>
               </div>
             )}
 
             {IN_FEB && todayPosts.length === 0 && (
-              <div className="border border-white/10 rounded-2xl p-8 text-center">
-                <p className="text-white font-black text-xl mb-2">No posts scheduled today.</p>
-                <p className="text-gray-500 text-sm">Check the calendar for what's coming up ↓</p>
+              <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+                <p className="text-xl font-black text-[#0a0a0a] mb-2">No posts scheduled today.</p>
+                <p className="text-gray-400 text-sm">Check the calendar below for what&apos;s coming up.</p>
               </div>
             )}
 
-            <div className="space-y-5">
+            <div className="space-y-4">
               {todayPosts.map(p => (
-                <div key={p.id} className={`border rounded-2xl overflow-hidden transition-all ${posted.has(p.id) ? 'border-green-800/40' : 'border-white/10'}`}>
-                  <div className="px-6 pt-6 pb-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
+                <div key={p.id}
+                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden transition-all ${
+                    posted.has(p.id)
+                      ? 'border-l-green-400 border-green-100 opacity-60'
+                      : 'border-gray-100 hover:border-gray-200'
+                  }`}
+                  style={!posted.has(p.id) ? { borderLeftColor: PC[p.platform] } : undefined}
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4 gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Plat p={p.platform} />
-                        <span className="text-xs font-semibold text-gray-500">{p.format}</span>
+                        <span className="text-xs font-semibold text-gray-400">{p.format}</span>
+                        {edits[p.id] && (
+                          <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Edited</span>
+                        )}
+                        {notes[p.id]?.trim() && (
+                          <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>
+                        )}
                       </div>
                       <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
                     </div>
-                    <h2 className="text-2xl lg:text-3xl font-black text-white mb-4 leading-tight">
+
+                    <h2 className="text-2xl lg:text-3xl font-black text-[#0a0a0a] mb-4 leading-tight">
                       &ldquo;{p.hook}&rdquo;
                     </h2>
-                    <ShootBrief text={p.shoot} dark />
+
+                    <ShootBrief text={p.shoot} />
                     <WarnBanner warn={p.warn} promoCode={p.promoCode} />
-                    <div className="text-sm text-gray-400 whitespace-pre-line leading-relaxed mt-5 mb-6">
-                      {p.caption}
-                    </div>
-                  </div>
-                  <div className="px-6 pb-6">
-                    <CopyFull text={p.caption} />
+
+                    {editing === p.id ? (
+                      <EditCaption
+                        id={p.id}
+                        text={getCaption(p)}
+                        original={p.caption}
+                        onSave={saveEdit}
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : (
+                      <div className="mt-4">
+                        <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">
+                          {getCaption(p)}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <CopyFull text={getCaption(p)} />
+                          <button
+                            onClick={() => setEditing(p.id)}
+                            className="px-5 py-3 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all whitespace-nowrap"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
                   </div>
                 </div>
               ))}
@@ -916,18 +1053,18 @@ export default function Home() {
             {/* Up Next */}
             {IN_FEB && upNext.length > 0 && (
               <div className="mt-8">
-                <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-4">Up Next</p>
-                <div className="grid md:grid-cols-5 gap-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Coming up</p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {upNext.map(u => (
-                    <div key={u.id} className="border border-white/[0.07] rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold text-gray-600">Feb {u.day}</span>
-                        <Copy text={u.caption} variant="ghost" label="Copy" />
+                    <button key={u.id}
+                      onClick={() => { setSel(u.day); document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' }) }}
+                      className="bg-white rounded-xl border border-gray-100 p-4 text-left hover:border-[#FD5C1E] transition-all group">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-black text-gray-400">Feb {u.day}</span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PC[u.platform] }} />
                       </div>
-                      <Plat p={u.platform} />
-                      <p className="text-sm text-gray-300 font-semibold mt-3 leading-snug">{u.hook}</p>
-                      <p className="text-xs text-gray-600 mt-1">{u.format}</p>
-                    </div>
+                      <p className="text-xs font-bold text-[#0a0a0a] leading-snug group-hover:text-[#FD5C1E] transition-colors line-clamp-3">{u.hook}</p>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1021,18 +1158,29 @@ export default function Home() {
               <div className="divide-y divide-orange-50">
                 {selPosts.map(p => (
                   <div key={p.id} className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between mb-4 gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Plat p={p.platform} />
                         <span className="text-xs text-gray-400 font-semibold">{p.format}</span>
+                        {edits[p.id] && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">Edited</span>}
                       </div>
                       <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
                     </div>
                     <h4 className="font-black text-[#0a0a0a] text-base mb-4 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
                     <ShootBrief text={p.shoot} />
                     <WarnBanner warn={p.warn} promoCode={p.promoCode} />
-                    <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed mt-4 mb-5">{p.caption}</div>
-                    <CopyFull text={p.caption} />
+                    {editing === p.id ? (
+                      <EditCaption id={p.id} text={getCaption(p)} original={p.caption} onSave={saveEdit} onCancel={() => setEditing(null)} />
+                    ) : (
+                      <div className="mt-4">
+                        <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 mb-3">{getCaption(p)}</div>
+                        <div className="flex gap-2">
+                          <CopyFull text={getCaption(p)} />
+                          <button onClick={() => setEditing(p.id)} className="px-4 py-3 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all">Edit</button>
+                        </div>
+                      </div>
+                    )}
+                    <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
                   </div>
                 ))}
               </div>
@@ -1051,43 +1199,71 @@ export default function Home() {
       <section id="captions" className="section-anchor px-6 lg:px-16 py-16 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Caption Library</p>
-          <h2 className="text-4xl font-black text-[#0a0a0a] mb-2">28 captions. Ready to post.</h2>
-          <p className="text-gray-400 text-base mb-8">Click any calendar day above to see the full post inline, or browse everything here.</p>
+          <h2 className="text-4xl font-black text-[#0a0a0a] mb-2">28 captions. Edit and copy.</h2>
+          <p className="text-gray-400 text-base mb-6">Every caption is editable — changes save locally to your browser.</p>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2 mb-10">
-            {(['All', 'TikTok', 'Instagram', 'Pinterest'] as const).map(f => (
-              <button key={f} onClick={() => setPf(f)}
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${pf === f ? 'bg-[#0a0a0a] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                {f}
+          {/* Search + Filters */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search captions by hook or copy..."
+              className="flex-1 text-sm text-gray-700 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors"
+            />
+            <div className="flex items-center gap-2 flex-wrap">
+              {(['All', 'TikTok', 'Instagram', 'Pinterest'] as const).map(f => (
+                <button key={f} onClick={() => setPf(f)}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${pf === f ? 'bg-[#0a0a0a] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                  {f}
+                </button>
+              ))}
+              <div className="w-px h-4 bg-gray-200" />
+              <button onClick={() => setHidePosted(h => !h)}
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${hidePosted ? 'bg-[#FD5C1E] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                {hidePosted ? 'Unposted only' : 'Hide posted'}
               </button>
-            ))}
-            <div className="w-px h-5 bg-gray-200 mx-1" />
-            <button onClick={() => setHidePosted(h => !h)}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${hidePosted ? 'bg-[#FD5C1E] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-              {hidePosted ? 'Showing unposted only' : 'Hide posted'}
-            </button>
-            <span className="text-xs text-gray-400 ml-1">{filteredLib.length} captions</span>
+              <span className="text-xs text-gray-400 font-semibold">{filteredLib.length} shown</span>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          {filteredLib.length === 0 && (
+            <div className="text-center py-16 text-gray-400">
+              <p className="text-lg font-bold">No captions match your search.</p>
+              <button onClick={() => { setSearch(''); setPf('All') }} className="text-sm text-[#FD5C1E] mt-2 hover:underline">Clear filters</button>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-5">
             {filteredLib.map(cap => (
-              <div key={cap.id} className={`rounded-2xl border overflow-hidden flex flex-col transition-all ${posted.has(cap.id) ? 'border-green-200 opacity-50' : 'border-gray-100 hover:border-gray-200'}`}>
-                <div className="h-1" style={{ backgroundColor: PC[cap.platform] }} />
-                <div className="p-6 flex flex-col flex-1 gap-4">
-                  <div className="flex items-center justify-between gap-2">
+              <div key={cap.id} className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col transition-all ${
+                posted.has(cap.id) ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100 hover:border-gray-200'
+              }`} style={!posted.has(cap.id) ? { borderLeftColor: PC[cap.platform] } : undefined}>
+                <div className="p-5 flex flex-col flex-1">
+                  <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Plat p={cap.platform} />
-                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">Feb {cap.day}</span>
-                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">{cap.format}</span>
+                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Feb {cap.day}</span>
+                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{cap.format}</span>
+                      {edits[cap.id] && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">Edited</span>}
                     </div>
                     <PostedBtn id={cap.id} posted={posted} toggle={togglePosted} />
                   </div>
-                  <h3 className="font-black text-[#0a0a0a] text-lg leading-snug">&ldquo;{cap.hook}&rdquo;</h3>
+                  <h3 className="font-black text-[#0a0a0a] text-base leading-snug mb-3">&ldquo;{cap.hook}&rdquo;</h3>
                   <ShootBrief text={cap.shoot} />
                   <WarnBanner warn={cap.warn} promoCode={cap.promoCode} />
-                  <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed flex-1">{cap.caption}</div>
-                  <CopyFull text={cap.caption} />
+                  {editing === cap.id ? (
+                    <EditCaption id={cap.id} text={getCaption(cap)} original={cap.caption} onSave={saveEdit} onCancel={() => setEditing(null)} />
+                  ) : (
+                    <div className="mt-3 flex-1 flex flex-col">
+                      <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 flex-1 border border-gray-100">{getCaption(cap)}</div>
+                      <div className="flex gap-2 mt-3">
+                        <CopyFull text={getCaption(cap)} />
+                        <button onClick={() => setEditing(cap.id)} className="px-4 py-3 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all">Edit</button>
+                      </div>
+                    </div>
+                  )}
+                  <NoteArea id={cap.id} notes={notes} saveNote={saveNote} />
                 </div>
               </div>
             ))}
