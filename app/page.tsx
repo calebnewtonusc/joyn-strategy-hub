@@ -1,214 +1,45 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 
-// ── static constants ───────────────────────────────────────────────────────────
-const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-
-// ── components ─────────────────────────────────────────────────────────────
-function Copy({ text, label = 'Copy', variant = 'dark' }: {
-  text: string; label?: string; variant?: 'dark' | 'orange' | 'ghost'
-}) {
-  const [ok, setOk] = useState(false)
-  const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
-  const base = 'font-bold rounded-xl transition-all text-sm whitespace-nowrap'
-  const v = {
-    dark:   ok ? 'bg-green-500 text-white px-5 py-2.5' : 'bg-[#0a0a0a] text-white hover:bg-gray-800 px-5 py-2.5',
-    orange: ok ? 'bg-green-500 text-white px-5 py-2.5' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18] px-5 py-2.5',
-    ghost:  ok ? 'bg-green-50 text-green-700 border border-green-200 px-4 py-1.5 text-xs' : 'border border-white/20 text-white/60 hover:border-white/40 hover:text-white px-4 py-1.5 text-xs',
-  }
-  return <button onClick={go} className={`${base} ${v[variant]}`}>{ok ? '✓ Copied' : label}</button>
-}
-
-function CopyFull({ text }: { text: string }) {
-  const [ok, setOk] = useState(false)
-  const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
-  return (
-    <button onClick={go} className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wide transition-all ${
-      ok ? 'bg-green-500 text-white' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18]'
-    }`}>
-      {ok ? '✓ COPIED TO CLIPBOARD' : 'COPY CAPTION'}
-    </button>
-  )
-}
-
-function CopyAll({ text }: { text: string }) {
-  const [ok, setOk] = useState(false)
-  const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
-  return (
-    <button onClick={go} className={`w-full py-3 rounded-xl font-black text-sm tracking-wide transition-all ${
-      ok ? 'bg-green-500 text-white' : 'bg-[#0a0a0a] text-white hover:bg-gray-800'
-    }`}>
-      {ok ? '✓ COPIED' : 'COPY ALL HASHTAGS'}
-    </button>
-  )
-}
-
+// ── constants ─────────────────────────────────────────────────────────────────
+const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const PC: Record<string, string> = { TikTok: '#FD5C1E', Instagram: '#E1306C', Pinterest: '#E60023' }
 
-function Plat({ p }: { p: string }) {
-  return (
-    <span className="inline-flex items-center text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full text-white"
-      style={{ backgroundColor: PC[p] }}>
-      {p}
-    </span>
-  )
-}
-
-function PostedBtn({ id, posted, toggle }: { id: number; posted: Set<number>; toggle: (id: number) => void }) {
-  const done = posted.has(id)
-  return (
-    <button onClick={() => toggle(id)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${
-      done ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'
-    }`}>
-      {done ? '✓ Posted' : '○ Mark posted'}
-    </button>
-  )
-}
-
-function WarnBanner({ warn, promoCode }: { warn?: string; promoCode?: string }) {
-  return (
-    <>
-      {warn && (
-        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-          <span className="shrink-0 text-sm mt-0.5">⚠️</span>
-          <div>
-            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Before you post</p>
-            <p className="text-xs text-amber-800 font-medium leading-relaxed">{warn}</p>
-          </div>
-        </div>
-      )}
-      {promoCode && (
-        <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
-          <div className="flex items-center gap-2.5">
-            <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Promo Code</span>
-            <span className="font-black text-[#0a0a0a] text-sm tracking-wide">{promoCode}</span>
-          </div>
-          <span className="text-[10px] text-orange-400 font-semibold">Verify active in store before posting</span>
-        </div>
-      )}
-    </>
-  )
-}
-
-function ShootBrief({ text, dark = false }: { text: string; dark?: boolean }) {
-  return (
-    <div className={`flex items-start gap-2 border-l-[3px] border-[#FD5C1E] rounded-r-xl px-4 py-3 ${dark ? 'bg-amber-950/40 border-amber-700/40' : 'bg-orange-50'}`}>
-      <span className="shrink-0 text-sm">📱</span>
-      <p className={`text-xs font-semibold leading-relaxed ${dark ? 'text-amber-300/90' : 'text-[#c44a18]'}`}>{text}</p>
-    </div>
-  )
-}
-
-function EditCaption({ id, text, original, onSave, onCancel }: {
-  id: number; text: string; original: string
-  onSave: (id: number, t: string) => void; onCancel: () => void
-}) {
-  const [val, setVal] = useState(text)
-  const ref = useRef<HTMLTextAreaElement>(null)
-  useEffect(() => { ref.current?.focus() }, [])
-  const isEdited = val !== original
-  return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Editing caption</span>
-        {isEdited && (
-          <button onClick={() => setVal(original)} className="text-[10px] text-gray-400 hover:text-gray-600 underline">Reset to original</button>
-        )}
-      </div>
-      <textarea
-        ref={ref}
-        value={val}
-        onChange={e => setVal(e.target.value)}
-        className="w-full text-sm text-gray-800 leading-relaxed bg-white border-2 border-[#FD5C1E] rounded-xl p-4 min-h-[220px] resize-y focus:outline-none font-mono"
-      />
-      <div className="flex gap-2 mt-2">
-        <button onClick={() => onSave(id, val)}
-          className="flex-1 py-2.5 rounded-xl bg-[#FD5C1E] text-white text-sm font-black hover:bg-[#e54d18] transition-all">
-          Save Caption
-        </button>
-        <button onClick={onCancel}
-          className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-gray-400 transition-all">
-          Cancel
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function NoteArea({ id, notes, saveNote }: {
-  id: number; notes: Record<number, string>; saveNote: (id: number, t: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [val, setVal] = useState(notes[id] ?? '')
-  useEffect(() => { setVal(notes[id] ?? '') }, [notes, id])
-  const hasNote = !!(notes[id]?.trim())
-  return (
-    <div className="mt-3 pt-3 border-t border-gray-100">
-      <button onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
-        <span className="text-sm">{hasNote ? '📝' : '+'}</span>
-        {hasNote ? 'Team note' : 'Add team note'}
-        {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
-      </button>
-      {open && (
-        <textarea
-          value={val}
-          onChange={e => { setVal(e.target.value); saveNote(id, e.target.value) }}
-          placeholder="Shoot date, approvals needed, assigned to..."
-          className="mt-2 w-full text-xs text-gray-700 leading-relaxed bg-amber-50 border border-amber-100 rounded-xl p-3 min-h-[72px] resize-none focus:outline-none focus:border-amber-300 placeholder-gray-300"
-        />
-      )}
-    </div>
-  )
-}
-
-function SetupBanner() {
-  const [dismissed, setDismissed] = useState(true)
-  useEffect(() => {
-    setDismissed(localStorage.getItem('joyn-setup-done') === '1')
-  }, [])
-  if (dismissed) return null
-  return (
-    <div className="bg-[#003882] border-b border-blue-900">
-      <div className="max-w-screen-xl mx-auto px-6 lg:px-16 py-5">
-        <div className="flex items-start gap-6 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-3">Before your first post — 4 things to action</p>
-            <div className="grid sm:grid-cols-2 gap-x-10 gap-y-2.5">
-              {([
-                ['Verify all promo codes', 'Confirm JOYN15 and any [ADD CODE] placeholders are active in your Shopify store before posting'],
-                ['Replace [Customer Name] placeholders', 'Posts 12 and 22 have template testimonials — swap in real customers with their explicit written permission'],
-                ['Replace the doctor quote on Day 15', 'Post 15 has a template physician quote — use a real medical advisor\'s words or restructure the post'],
-                ['Read every caption once', 'All 28 are copy-ready but voice, facts, and claims are yours to own — one read-through before publishing'],
-              ] as [string, string][]).map(([title, desc]) => (
-                <div key={title} className="flex items-start gap-2">
-                  <span className="text-[#FD5C1E] text-xs mt-0.5 shrink-0">→</span>
-                  <p className="text-xs text-blue-100 leading-relaxed"><span className="font-bold text-white">{title}:</span> {desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <button
-            onClick={() => { localStorage.setItem('joyn-setup-done', '1'); setDismissed(true) }}
-            className="text-blue-400 text-xs font-bold hover:text-white transition-colors whitespace-nowrap shrink-0 border border-blue-700 hover:border-blue-400 px-4 py-2 rounded-lg"
-          >
-            Got it — hide this
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── data ──────────────────────────────────────────────────────────────────────
+// ── types ─────────────────────────────────────────────────────────────────────
 type Platform = 'TikTok' | 'Instagram' | 'Pinterest'
-type Post = { id: number; day: number; week: 1|2|3|4; platform: Platform; format: string; hook: string; shoot: string; caption: string; warn?: string; promoCode?: string }
+type PF       = 'All' | Platform
+type Post     = {
+  id: string
+  date: string        // YYYY-MM-DD
+  platform: Platform
+  format: string
+  hook: string
+  shoot: string
+  caption: string
+  warn?: string
+  promoCode?: string
+}
 
-const WEEK_THEMES = ['Launch + Science', 'Social Proof', 'Community + Founder', 'Milestone + Scale']
+// ── helpers ───────────────────────────────────────────────────────────────────
+function pad(n: number) { return String(n).padStart(2, '0') }
+function toDateStr(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}` }
+function nowDateStr(now: Date) { return toDateStr(now.getFullYear(), now.getMonth(), now.getDate()) }
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2) }
+function addDays(dateStr: string, n: number) {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return toDateStr(d.getFullYear(), d.getMonth(), d.getDate())
+}
+function formatDisplayDate(dateStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return `${MONTH_NAMES[m - 1]} ${d}, ${y}`
+}
 
-const POSTS: Post[] = [
+// ── default posts ─────────────────────────────────────────────────────────────
+const SEED: Post[] = [
   {
-    id:1, day:1, week:1, platform:'Instagram', format:'Announcement Post',
+    id:'1', date:'2026-02-01', platform:'Instagram', format:'Announcement Post',
     hook: "We're live. 600 million people have been waiting for this.",
     shoot: 'Founder photo or product flat lay on warm Joyn orange surface. This is your launch post — keep it personal and real, not overly produced.',
     caption: `We're live. 🧡
@@ -226,7 +57,7 @@ Drop a 🧡 if you've been waiting for something like this.
 #Joyn #ConfidenceInACapsule #ALDH2 #AlcoholFlush #WomanFounded #Launch #NewBrand`,
   },
   {
-    id:2, day:2, week:1, platform:'TikTok', format:'Educational Hook',
+    id:'2', date:'2026-02-02', platform:'TikTok', format:'Educational Hook',
     hook: 'Why your face turns red when you drink — the genetic truth nobody told you',
     shoot: 'Green screen with ALDH2 enzyme diagram. Keep under 60s. This is your hero education post — high save + share rate. It blows up.',
     caption: `Why your face turns red when you drink — the genetic truth nobody told you 🧬
@@ -248,7 +79,7 @@ Drop "flush" in the comments and I'll DM you the link 👇
 #ALDH2 #AlcoholFlush #AsianGlow #HealthTok #SupplementTok #GeneticHealth #Joyn`,
   },
   {
-    id:3, day:3, week:1, platform:'Instagram', format:'Carousel (6 slides)',
+    id:'3', date:'2026-02-03', platform:'Instagram', format:'Carousel (6 slides)',
     hook: 'Save this. Share it with someone who needs it. 📌',
     shoot: 'Slide 1: bold hook on Joyn orange bg. Slides 2–5: one ALDH2 fact each on clean white. Slide 6: CTA + discount code. No fancy design needed — clear > pretty.',
     caption: `Save this. Share it with someone who needs it. 📌
@@ -269,7 +100,7 @@ Woman-founded. USA-made. Third-party tested.
 #ALDH2 #AlcoholFlush #AsianGlow #Joyn #HealthEducation #WomanFounded #ConfidenceInACapsule #AAPI`,
   },
   {
-    id:4, day:4, week:1, platform:'TikTok', format:'Relatable List',
+    id:'4', date:'2026-02-04', platform:'TikTok', format:'Relatable List',
     hook: 'Things people with Asian flush relate to (a thread) 😭',
     shoot: 'Text list on screen, trending audio, react to each one. High comment + share format. Ask viewers to drop their most relatable one.',
     caption: `Things people with Asian flush relate to (a thread) 😭
@@ -292,7 +123,7 @@ Comment your most relatable one 👇 I read every comment
 #AsianGlow #ALDH2 #AlcoholFlush #AsianAmericanProblems #Joyn #FlushReaction`,
   },
   {
-    id:5, day:5, week:1, platform:'TikTok', format:'First-Person Story',
+    id:'5', date:'2026-02-05', platform:'TikTok', format:'First-Person Story',
     hook: "I tried Joyn at my work happy hour and I'm still processing 😭",
     shoot: 'Selfie cam. Casual, conversational — sitting in a car or at home. No script. Could also be voiceover over office/bar B-roll.',
     caption: `I tried Joyn at my work happy hour and I'm still processing 😭
@@ -310,7 +141,7 @@ I didn't tell him why. I didn't have to.
 #Joyn #WorkHappyHour #ALDH2 #AlcoholFlush #HealthTok #ConfidenceInACapsule`,
   },
   {
-    id:6, day:6, week:1, platform:'TikTok', format:'Short Hook',
+    id:'6', date:'2026-02-06', platform:'TikTok', format:'Short Hook',
     promoCode: 'JOYN15',
     hook: 'Red wine. Not red face. 🍷',
     shoot: 'Short, punchy — under 20 seconds. B-roll of someone enjoying wine at dinner, looking relaxed. Text overlay only. No voiceover needed.',
@@ -329,7 +160,7 @@ Use code JOYN15 → link in bio 🧡
 #Joyn #RedWine #ALDH2 #AlcoholFlush #ConfidenceInACapsule #FlushFree`,
   },
   {
-    id:7, day:7, week:1, platform:'Instagram', format:'Q&A Prompt',
+    id:'7', date:'2026-02-07', platform:'Instagram', format:'Q&A Prompt',
     hook: 'Drop your questions about alcohol flush and Joyn below 👇',
     shoot: 'Simple post — Joyn orange background or casual founder photo. Goal is engagement, not aesthetics. Also post a Story asking the same question.',
     caption: `Drop your questions about alcohol flush and Joyn below 👇
@@ -348,7 +179,7 @@ This community is what we built Joyn for. 🧡
 #Joyn #QandA #ALDH2 #AlcoholFlush #Community #AskUsAnything`,
   },
   {
-    id:8, day:8, week:2, platform:'TikTok', format:'Tier List',
+    id:'8', date:'2026-02-08', platform:'TikTok', format:'Tier List',
     hook: 'Rating every alcohol flush "cure" from worst to best (HONEST)',
     shoot: 'On-screen tier list with comedic reaction to each. Fast cuts. Highly shareable — built for saves. Be honest, including about Joyn.',
     caption: `Rating every alcohol flush "cure" from worst to best — be honest, you've tried most of these 😅
@@ -367,7 +198,7 @@ Link in bio.
 #AlcoholFlush #AsianGlow #ALDH2 #Joyn #HealthTok #FlushRemedies`,
   },
   {
-    id:9, day:9, week:2, platform:'TikTok', format:'Before / After',
+    id:'9', date:'2026-02-09', platform:'TikTok', format:'Before / After',
     hook: 'Before Joyn vs. After Joyn: The honest version 🔄',
     shoot: 'Split screen or alternating text cards. Keep it real and grounded — no over-the-top claims. The truth is compelling enough.',
     caption: `Before Joyn vs. After Joyn: The honest version 🔄
@@ -393,7 +224,7 @@ Drop "flush" in the comments and I'll DM you the link 👇
 #Joyn #BeforeAndAfter #ALDH2 #AlcoholFlush #HealthTok #ConfidenceInACapsule`,
   },
   {
-    id:10, day:10, week:2, platform:'TikTok', format:'Educational Warning',
+    id:'10', date:'2026-02-10', platform:'TikTok', format:'Educational Warning',
     hook: "Pepcid for alcohol flush? Your doctor probably doesn't know this 😳",
     shoot: 'Calm, credible delivery. Show Reddit thread screenshots as B-roll. This one gets shared wildly — doctors will share it too.',
     caption: `Pepcid for alcohol flush? Your doctor probably doesn't know this 😳
@@ -415,7 +246,7 @@ If this helped, share it. Link in bio 🙏
 #AlcoholFlush #Pepcid #ALDH2 #AsianGlow #HealthTok #DrinkingTips #Joyn`,
   },
   {
-    id:11, day:11, week:2, platform:'TikTok', format:'Lifestyle Story',
+    id:'11', date:'2026-02-11', platform:'TikTok', format:'Lifestyle Story',
     hook: 'Open bar at a wedding with zero anxiety 💒',
     shoot: 'Cinematic clips from a wedding or a night out — toasts, dancing, being present. Voiceover or text overlay. Pure aspiration.',
     caption: `Open bar at a wedding with zero anxiety 💒
@@ -434,8 +265,8 @@ I was just there. Fully.
 #Joyn #WeddingSeason #OpenBar #ALDH2 #AlcoholFlush #ConfidenceInACapsule`,
   },
   {
-    id:12, day:12, week:2, platform:'Instagram', format:'Quote Card',
-    warn: 'Template post — replace every [placeholder] with a real verified customer before posting. DM 5-star reviewers and get explicit written permission to use their words publicly. Never post fabricated testimonials.',
+    id:'12', date:'2026-02-12', platform:'Instagram', format:'Quote Card',
+    warn: 'Template post — replace every [placeholder] with a real verified customer before posting. Get explicit written permission. Never post fabricated testimonials.',
     promoCode: '[ADD LAUNCH CODE]',
     hook: '"[Customer quote — their own words, their own moment.]" — [Name, Age]',
     shoot: 'Clean quote card on Joyn orange background. Or a warm candid celebration photo with the quote overlaid. Let the real quote do all the work.',
@@ -454,7 +285,7 @@ Real review. Real customer.
 #Joyn #CustomerStory #ALDH2 #AlcoholFlush #ConfidenceInACapsule #Testimonial`,
   },
   {
-    id:13, day:13, week:2, platform:'Instagram', format:'Cultural Moment',
+    id:'13', date:'2026-02-13', platform:'Instagram', format:'Cultural Moment',
     promoCode: '[ADD LNY CODE]',
     hook: 'Lunar New Year without the flush — first time ever 🧧',
     shoot: 'Warm LNY aesthetic — red, gold, family celebration. Could be UGC. Post LNY eve for max emotional reach.',
@@ -476,10 +307,10 @@ That's the whole point. 🥂
 #LunarNewYear #ChineseNewYear #AAPI #ALDH2 #AsianGlow #Joyn #CelebrateFreely`,
   },
   {
-    id:14, day:14, week:2, platform:'Instagram', format:"Valentine's Day Post",
+    id:'14', date:'2026-02-14', platform:'Instagram', format:"Valentine's Day Post",
     promoCode: '[ADD CODE]',
     hook: "Valentine's Day with confidence you've never had before 💛",
-    shoot: 'Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work.',
+    shoot: "Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work.",
     caption: `Valentine's Day with confidence you've never had before 💛
 
 To everyone who's ever ordered sparkling water on a date because one drink would end the night —
@@ -499,8 +330,8 @@ Use code [ADD CODE] → link in bio 🧡
 #Joyn #ValentinesDay #ALDH2 #AlcoholFlush #ConfidenceInACapsule #DateNight`,
   },
   {
-    id:15, day:15, week:3, platform:'TikTok', format:'Expert Review',
-    warn: 'Template post — replace with a real medical advisor\'s actual words. Get written sign-off before publishing. Never fabricate expert endorsements — this is an FTC violation.',
+    id:'15', date:'2026-02-15', platform:'TikTok', format:'Expert Review',
+    warn: "Template post — replace with a real medical advisor's actual words. Get written sign-off before publishing. Never fabricate expert endorsements — this is an FTC violation.",
     hook: "Asked a doctor to review Joyn — here's what she said 🩺",
     shoot: 'Credible, calm delivery to camera. No lab coat required. Could be voiceover with ingredient text on screen. Do NOT be salesy — let the science speak.',
     caption: `Asked a doctor to review Joyn — here's what she said 🩺
@@ -518,7 +349,7 @@ Full formula breakdown → link in bio 🔬
 #Joyn #DoctorReview #ALDH2 #HealthTok #SupplementTok #Science #AlcoholFlush`,
   },
   {
-    id:16, day:16, week:3, platform:'Instagram', format:'Carousel (6 slides)',
+    id:'16', date:'2026-02-16', platform:'Instagram', format:'Carousel (6 slides)',
     hook: 'ALDH2 deficiency — the complete breakdown 🧬',
     shoot: 'Clean educational carousel. Slide 1: bold hook on Joyn orange. Slides 2-5: one fact each. Slide 6: Joyn CTA. White + orange palette. Save rate will be high.',
     caption: `ALDH2 deficiency — the complete breakdown 🧬
@@ -540,7 +371,7 @@ Here's everything your doctor probably never told you:
 #ALDH2 #AlcoholFlush #AsianGlow #HealthEducation #Joyn #ConfidenceInACapsule #SaveThis`,
   },
   {
-    id:17, day:17, week:3, platform:'TikTok', format:'Founder Story',
+    id:'17', date:'2026-02-17', platform:'TikTok', format:'Founder Story',
     hook: 'I spent years building Joyn because I was tired of hiding',
     shoot: 'Founder to camera. No script, no teleprompter. Just talk. This is the most powerful content you can make — authentic founder story converts.',
     caption: `I spent years building Joyn because I was tired of hiding 🍷
@@ -560,7 +391,7 @@ This is Joyn. For every person who's ever hidden. 💛
 #Joyn #WomanFounded #ALDH2 #AlcoholFlush #Founder #ConfidenceInACapsule`,
   },
   {
-    id:18, day:18, week:3, platform:'Instagram', format:'Story Poll',
+    id:'18', date:'2026-02-18', platform:'Instagram', format:'Story Poll',
     hook: 'What celebration are you most excited for this year?',
     shoot: 'Post a Story with a poll sticker. Joyn orange background. Poll options: "A wedding" / "Graduation" / "Date night" / "Just a Friday." Also post this as a feed caption for engagement.',
     caption: `What celebration are you most excited for this year? 🎉
@@ -576,7 +407,7 @@ Joyn is here for every single one. 🧡
 #Joyn #Celebrate #ALDH2 #ConfidenceInACapsule #CelebrateFreely`,
   },
   {
-    id:19, day:19, week:3, platform:'TikTok', format:'Selfie Diary',
+    id:'19', date:'2026-02-19', platform:'TikTok', format:'Selfie Diary',
     hook: "7 days with Joyn — I'm going to be honest",
     shoot: 'Selfie-cam across 7 real days. Natural lighting. No script. This format converts — authentic > polished. Film Day 1 on Feb 12, post Feb 19.',
     caption: `7 days with Joyn — I'm going to be honest 📔
@@ -596,7 +427,7 @@ Not an ad. Just someone who needed this to exist.
 #Joyn #AlcoholFlush #ALDH2 #HealthTok #HonestReview #7DayChallenge #ConfidenceInACapsule`,
   },
   {
-    id:20, day:20, week:3, platform:'Instagram', format:'Founder Feed Post',
+    id:'20', date:'2026-02-20', platform:'Instagram', format:'Founder Feed Post',
     hook: "We didn't build Joyn to get rich. We built it because we were tired of hiding.",
     shoot: 'Personal editorial photo of Brynn or the team. Warm lighting. No product in frame. This is about the human story, not the product.',
     caption: `We didn't build Joyn to get rich. We built it because we were tired of hiding. 🍷
@@ -616,7 +447,7 @@ Joyn. Confidence in a capsule. 🧡
 #Joyn #WomanFounded #ALDH2 #AlcoholFlush #ConfidenceInACapsule #USAMade`,
   },
   {
-    id:21, day:21, week:3, platform:'TikTok', format:'Lifestyle Video',
+    id:'21', date:'2026-02-21', platform:'TikTok', format:'Lifestyle Video',
     promoCode: '[ADD CODE]',
     hook: 'Spring break. No flush edition. 🌴',
     shoot: 'Fun, energetic spring break energy. Trending audio. Light and summery edit. Fast cuts. This is an ad-adjacent organic post.',
@@ -635,8 +466,8 @@ Use code [ADD CODE] for 15% off → link in bio 🧡
 #SpringBreak #AlcoholFlush #ALDH2 #AsianGlow #Joyn #CelebrateFully #ConfidenceInACapsule`,
   },
   {
-    id:22, day:22, week:4, platform:'Instagram', format:'Community Spotlight',
-    warn: 'Template post — collect real DM stories before building this. Post an Instagram Story asking followers to share their Joyn moment. Get explicit written permission from each person. Then replace every [placeholder] below with their real words.',
+    id:'22', date:'2026-02-22', platform:'Instagram', format:'Community Spotlight',
+    warn: 'Template post — collect real DM stories before building this. Post an Instagram Story asking followers to share their Joyn moment. Get explicit written permission from each person. Then replace every [placeholder] below.',
     hook: "You sent us your stories this month. We can't stop reading them. 🧡",
     shoot: 'Collage of real DM screenshots (with permission) or quote cards on Joyn cream background. Warm, grateful energy. Real names or anonymous — always ask first.',
     caption: `You sent us your stories this month. We can't stop reading them. 🧡
@@ -656,7 +487,7 @@ Keep sending them. We read every single one.
 #Joyn #CommunityStories #ALDH2 #AlcoholFlush #ConfidenceInACapsule #CustomerLove`,
   },
   {
-    id:23, day:23, week:4, platform:'TikTok', format:'Ingredient Breakdown',
+    id:'23', date:'2026-02-23', platform:'TikTok', format:'Ingredient Breakdown',
     hook: "Every ingredient in Joyn and exactly why it's there 🔬",
     shoot: 'Green screen or text overlay with ingredient list. Credible, educational tone. High save rate format. Show the bottle.',
     caption: `Every ingredient in Joyn and exactly why it's there 🔬
@@ -678,7 +509,7 @@ Save this. Full breakdown → link in bio.
 #Joyn #Ingredients #ALDH2 #HealthTok #SupplementTok #Transparency #CleanSupplements`,
   },
   {
-    id:24, day:24, week:4, platform:'Instagram', format:'Milestone Post',
+    id:'24', date:'2026-02-24', platform:'Instagram', format:'Milestone Post',
     hook: '30 days. Thousands of celebrations. 🥂',
     shoot: 'Celebratory and warm. Founder photo, product shot, or a collage of customer moments. This is your month-end moment — make it meaningful.',
     caption: `30 days. Thousands of celebrations. 🥂
@@ -697,7 +528,7 @@ Thank you. 🧡
 #Joyn #OneMonth #ALDH2 #AlcoholFlush #ConfidenceInACapsule #ThankYou #WomanFounded`,
   },
   {
-    id:25, day:25, week:4, platform:'TikTok', format:'Skeptic Response',
+    id:'25', date:'2026-02-25', platform:'TikTok', format:'Skeptic Response',
     hook: "I read every skeptical comment about Joyn so you don't have to 😅",
     shoot: 'Fast cuts, text overlay for each objection. Honest and slightly funny. Builds trust by acknowledging doubt head-on.',
     caption: `I read every skeptical comment about Joyn so you don't have to 😅
@@ -719,7 +550,7 @@ Formula transparency → link in bio 🔬
 #Joyn #SkepticsWelcome #ALDH2 #HealthTok #AlcoholFlush #ConfidenceInACapsule`,
   },
   {
-    id:26, day:26, week:4, platform:'Instagram', format:'Community CTA',
+    id:'26', date:'2026-02-26', platform:'Instagram', format:'Community CTA',
     hook: 'Community weekend 🔥 Send us your story.',
     shoot: 'Simple, energetic post — orange graphic or casual founder video. Goal is to flood the DMs. Maximize engagement above all else.',
     caption: `Community weekend 🔥
@@ -739,10 +570,10 @@ Drop your story below 👇
 #Joyn #CommunityTakeover #ALDH2 #AlcoholFlush #YourStory #ConfidenceInACapsule`,
   },
   {
-    id:27, day:27, week:4, platform:'TikTok', format:'Entertainment',
+    id:'27', date:'2026-02-27', platform:'TikTok', format:'Entertainment',
     promoCode: '[ADD CODE]',
     hook: "Rating celebrity flush moments they definitely didn't want us to see 😭",
-    shoot: 'Entertaining — use publicly available footage or general B-roll. Do NOT name specific individuals without legal review first. Frame everything as solidarity, not mockery. High share format.',
+    shoot: 'Entertaining — use publicly available footage or general B-roll. Do NOT name specific individuals without legal review first. Frame everything as solidarity, not mockery.',
     caption: `Rating celebrity flush moments they definitely didn't want us to see 😭
 
 (Solidarity, not mockery — ALDH2 affects everyone regardless of fame or following)
@@ -760,7 +591,7 @@ Code [ADD CODE] → link in bio 🧡
 #Joyn #AsianGlow #ALDH2 #TikTokFun #AlcoholFlush #ConfidenceInACapsule #AsianAmerican`,
   },
   {
-    id:28, day:28, week:4, platform:'Instagram', format:'Month Wrap-up',
+    id:'28', date:'2026-02-28', platform:'Instagram', format:'Month Wrap-up',
     hook: "Month 1 is done. Here's to the 600M. 🥂",
     shoot: 'Most important post of the month. Emotional, warm. Founder or team photo. Real, personal, not polished. This is the closer.',
     caption: `Month 1 is done. Here's to the 600M. 🥂
@@ -788,7 +619,246 @@ Joyn. Confidence in a capsule. 🧡
   },
 ]
 
-// ── hashtags ──────────────────────────────────────────────────────────────────
+// ── small components ──────────────────────────────────────────────────────────
+function Copy({ text, label = 'Copy', variant = 'dark' }: { text: string; label?: string; variant?: 'dark'|'orange'|'ghost' }) {
+  const [ok, setOk] = useState(false)
+  const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
+  const base = 'font-bold rounded-xl transition-all text-sm whitespace-nowrap'
+  const v: Record<string, string> = {
+    dark:   ok ? 'bg-green-500 text-white px-5 py-2.5' : 'bg-[#0a0a0a] text-white hover:bg-gray-800 px-5 py-2.5',
+    orange: ok ? 'bg-green-500 text-white px-5 py-2.5' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18] px-5 py-2.5',
+    ghost:  ok ? 'bg-green-50 text-green-700 border border-green-200 px-4 py-1.5 text-xs' : 'border border-white/20 text-white/60 hover:border-white/40 hover:text-white px-4 py-1.5 text-xs',
+  }
+  return <button onClick={go} className={`${base} ${v[variant]}`}>{ok ? '✓ Copied' : label}</button>
+}
+
+function CopyFull({ text }: { text: string }) {
+  const [ok, setOk] = useState(false)
+  const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
+  return (
+    <button onClick={go} className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wide transition-all ${ok ? 'bg-green-500 text-white' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18]'}`}>
+      {ok ? '✓ COPIED TO CLIPBOARD' : 'COPY CAPTION'}
+    </button>
+  )
+}
+
+function CopyAll({ text }: { text: string }) {
+  const [ok, setOk] = useState(false)
+  const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
+  return (
+    <button onClick={go} className={`w-full py-3 rounded-xl font-black text-sm tracking-wide transition-all ${ok ? 'bg-green-500 text-white' : 'bg-[#0a0a0a] text-white hover:bg-gray-800'}`}>
+      {ok ? '✓ COPIED' : 'COPY ALL HASHTAGS'}
+    </button>
+  )
+}
+
+function Plat({ p }: { p: string }) {
+  return (
+    <span className="inline-flex items-center text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full text-white" style={{ backgroundColor: PC[p] }}>
+      {p}
+    </span>
+  )
+}
+
+function PostedBtn({ id, posted, toggle }: { id: string; posted: Set<string>; toggle: (id: string) => void }) {
+  const done = posted.has(id)
+  return (
+    <button onClick={() => toggle(id)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${done ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'}`}>
+      {done ? '✓ Posted' : '○ Mark posted'}
+    </button>
+  )
+}
+
+function WarnBanner({ warn, promoCode }: { warn?: string; promoCode?: string }) {
+  return (
+    <>
+      {warn && (
+        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-3">
+          <span className="shrink-0 text-sm mt-0.5">⚠️</span>
+          <div>
+            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-0.5">Before you post</p>
+            <p className="text-xs text-amber-800 font-medium leading-relaxed">{warn}</p>
+          </div>
+        </div>
+      )}
+      {promoCode && (
+        <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 mt-3">
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Promo Code</span>
+            <span className="font-black text-[#0a0a0a] text-sm tracking-wide">{promoCode}</span>
+          </div>
+          <span className="text-[10px] text-orange-400 font-semibold">Verify active in store before posting</span>
+        </div>
+      )}
+    </>
+  )
+}
+
+function ShootBrief({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 border-l-[3px] border-[#FD5C1E] bg-orange-50 rounded-r-xl px-4 py-3 mt-3">
+      <span className="shrink-0 text-sm">📱</span>
+      <p className="text-xs font-semibold leading-relaxed text-[#c44a18]">{text}</p>
+    </div>
+  )
+}
+
+// ── PostEditor modal ──────────────────────────────────────────────────────────
+const IL = 'text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5'
+const II = 'w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors'
+const IT = 'w-full text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors resize-none'
+
+function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
+  post: Post; onSave: (p: Post) => void; onDelete?: (id: string) => void
+  onClose: () => void; isNew?: boolean
+}) {
+  const [form, setForm] = useState<Post>({ ...post })
+  const up = <K extends keyof Post>(k: K, v: Post[K]) => setForm(f => ({ ...f, [k]: v }))
+  const valid = form.date && form.hook.trim() && form.caption.trim()
+
+  return (
+    <div className="fixed inset-0 z-50 flex" style={{ fontFamily: 'inherit' }}>
+      <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
+
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+          <h2 className="font-black text-[#0a0a0a] text-lg">{isNew ? '+ Add Post' : 'Edit Post'}</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">✕</button>
+        </div>
+
+        {/* Fields */}
+        <div className="px-6 py-6 space-y-5 flex-1">
+
+          <div className="grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className={IL}>Date *</span>
+              <input type="date" value={form.date} onChange={e => up('date', e.target.value)} className={II} />
+            </label>
+            <label className="block">
+              <span className={IL}>Format</span>
+              <input type="text" value={form.format} onChange={e => up('format', e.target.value)} placeholder="e.g. Reel, Carousel" className={II} />
+            </label>
+          </div>
+
+          <div>
+            <span className={IL}>Platform *</span>
+            <div className="flex gap-2">
+              {(['TikTok', 'Instagram', 'Pinterest'] as const).map(p => (
+                <button key={p} onClick={() => up('platform', p)}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${form.platform === p ? 'text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  style={form.platform === p ? { backgroundColor: PC[p] } : undefined}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="block">
+            <span className={IL}>Hook *</span>
+            <input type="text" value={form.hook} onChange={e => up('hook', e.target.value)} placeholder="The opening line that stops the scroll" className={II} />
+          </label>
+
+          <label className="block">
+            <span className={IL}>Shoot Brief</span>
+            <textarea value={form.shoot} onChange={e => up('shoot', e.target.value)} placeholder="What to film, shoot, or design" rows={3} className={IT} />
+          </label>
+
+          <label className="block">
+            <span className={IL}>Caption *</span>
+            <textarea value={form.caption} onChange={e => up('caption', e.target.value)} placeholder="Full caption including hashtags" rows={14} className={IT + ' font-mono text-xs leading-relaxed'} />
+          </label>
+
+          <div className="grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className={IL}>Promo Code</span>
+              <input type="text" value={form.promoCode ?? ''} onChange={e => up('promoCode', e.target.value || undefined)} placeholder="e.g. JOYN15" className={II} />
+            </label>
+            <div />
+          </div>
+
+          <label className="block">
+            <span className={IL}>Pre-Post Warning</span>
+            <textarea value={form.warn ?? ''} onChange={e => up('warn', e.target.value || undefined)} placeholder="Reminder before posting (testimonials, approvals...)" rows={2} className={IT} />
+          </label>
+        </div>
+
+        {/* Actions */}
+        <div className="px-6 pb-6 pt-4 border-t border-gray-100 space-y-2 sticky bottom-0 bg-white">
+          <button onClick={() => { if (valid) { onSave(form); onClose() } }}
+            className={`w-full py-3.5 rounded-xl font-black text-sm transition-all ${valid ? 'bg-[#FD5C1E] text-white hover:bg-[#e54d18]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+            {isNew ? 'Add Post' : 'Save Changes'}
+          </button>
+          {!isNew && onDelete && (
+            <button onClick={() => { if (window.confirm('Delete this post? This cannot be undone.')) { onDelete(form.id); onClose() } }}
+              className="w-full py-2.5 border border-red-100 text-red-400 rounded-xl font-bold text-sm hover:bg-red-50 transition-all">
+              Delete Post
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── NoteArea ──────────────────────────────────────────────────────────────────
+function NoteArea({ id, notes, saveNote }: { id: string; notes: Record<string, string>; saveNote: (id: string, t: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [val, setVal] = useState(notes[id] ?? '')
+  useEffect(() => { setVal(notes[id] ?? '') }, [notes, id])
+  const hasNote = !!(notes[id]?.trim())
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100">
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+        <span className="text-sm">{hasNote ? '📝' : '+'}</span>
+        {hasNote ? 'Team note' : 'Add team note'}
+        {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
+      </button>
+      {open && (
+        <textarea value={val} onChange={e => { setVal(e.target.value); saveNote(id, e.target.value) }}
+          placeholder="Shoot date, assigned to, approvals needed..."
+          className="mt-2 w-full text-xs text-gray-700 leading-relaxed bg-amber-50 border border-amber-100 rounded-xl p-3 min-h-[72px] resize-none focus:outline-none focus:border-amber-300 placeholder-gray-300" />
+      )}
+    </div>
+  )
+}
+
+// ── SetupBanner ───────────────────────────────────────────────────────────────
+function SetupBanner() {
+  const [dismissed, setDismissed] = useState(true)
+  useEffect(() => { setDismissed(localStorage.getItem('joyn-setup-done') === '1') }, [])
+  if (dismissed) return null
+  return (
+    <div className="bg-[#003882] border-b border-blue-900">
+      <div className="max-w-screen-xl mx-auto px-6 lg:px-16 py-5">
+        <div className="flex items-start gap-6 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-3">Before your first post — 4 things to action</p>
+            <div className="grid sm:grid-cols-2 gap-x-10 gap-y-2.5">
+              {([
+                ['Verify all promo codes', 'Confirm JOYN15 and any [ADD CODE] placeholders are active in your Shopify store'],
+                ['Replace [Customer Name] placeholders', 'Posts 12 and 22 — click Edit Post and swap in real customers with permission'],
+                ['Replace the doctor quote on Feb 15', 'Click Edit Post → use your real medical advisor\'s words with written approval'],
+                ['Add your March posts', 'Use the + Add Post button on any day to build out next month\'s calendar'],
+              ] as [string, string][]).map(([title, desc]) => (
+                <div key={title} className="flex items-start gap-2">
+                  <span className="text-[#FD5C1E] text-xs mt-0.5 shrink-0">→</span>
+                  <p className="text-xs text-blue-100 leading-relaxed"><span className="font-bold text-white">{title}:</span> {desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={() => { localStorage.setItem('joyn-setup-done', '1'); setDismissed(true) }}
+            className="text-blue-400 text-xs font-bold hover:text-white transition-colors whitespace-nowrap shrink-0 border border-blue-700 hover:border-blue-400 px-4 py-2 rounded-lg">
+            Got it — hide this
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── static data ───────────────────────────────────────────────────────────────
 const HASHTAGS = [
   { name: 'Education & Science', desc: 'For ALDH2 explainers, science content, health education', tags: '#ALDH2 #AlcoholFlush #ALDH2Deficiency #AsianGlow #FlushReaction #HealthTok #SupplementTok #GeneticHealth #HealthEducation #ScienceExplained #AlcoholMetabolism #MedicalFacts' },
   { name: 'AAPI Community', desc: 'For community content, cultural moments, relatable posts', tags: '#AsianAmerican #AAPI #AAPITikTok #AsianAmericanHealth #AsianGlow #EastAsian #AsianAmericanCommunity #AsianTikTok #AsianAmericanProblems #ALDH2 #CulturalHealth #AAPIVoices' },
@@ -798,98 +868,76 @@ const HASHTAGS = [
   { name: 'Pinterest SEO', desc: 'Keyword phrases for pin descriptions — use these, not hashtags', tags: 'alcohol flush supplement, ALDH2 deficiency remedy, how to stop Asian glow, alcohol flush treatment, Asian flush natural remedy, supplement for alcohol flush, stop face turning red when drinking' },
 ]
 
-// ── ads ───────────────────────────────────────────────────────────────────────
 const ADS = [
-  {
-    id:1, platform:'Meta', stage:'Awareness',
-    hook: "Your face turns red when you drink. There's a genetic reason — and a real solution.",
-    headline: 'Finally. A real solution for alcohol flush.',
-    body: '600 million people have ALDH2 deficiency — the genetic reason your face turns red when you drink. For years, the only option was Pepcid AC, an antacid used off-label that damages your stomach. Joyn is the first supplement formulated specifically for ALDH2. Woman-founded. USA-made.',
-    cta: 'Learn More',
-    note: 'Target: Asian-American 21–40, wellness, social dining. CPM target <$10.',
-  },
-  {
-    id:2, platform:'Meta', stage:'Conversion',
-    hook: 'Stop hiding at celebrations. Start showing up fully.',
-    headline: 'Confidence in a capsule. 15% off your first order.',
-    body: "Joyn supports ALDH2 enzyme activity so you can show up fully — at weddings, work events, first dates, wherever. Take 2 capsules 30 min before drinking. Join thousands of customers living flush-free. Use code JOYN15.",
-    cta: 'Shop Now — Code JOYN15',
-    note: 'Retarget: 50%+ video viewers, site visitors, cart abandoners. CPA target <$35.',
-  },
-  {
-    id:3, platform:'Meta', stage:'Retention',
-    hook: 'Never run out. Never miss a celebration.',
-    headline: 'Subscribe & Save 20% — free shipping every bottle.',
-    body: "You've found your answer. Make sure you never run out. Joyn Subscribe & Save: 20% off every order, free shipping, cancel anytime. Confidence in a capsule, every month.",
-    cta: 'Subscribe & Save',
-    note: 'Target: past purchasers only. LTV target >$120.',
-  },
-  {
-    id:4, platform:'TikTok', stage:'Awareness',
-    hook: 'POV: You finally have a real answer to alcohol flush',
-    headline: '600M people have ALDH2 deficiency. Joyn was built for them.',
-    body: 'UGC-style. Creator holds Joyn bottle, explains ALDH2 in 15s, cuts to event scene looking confident. Text overlay: "ALDH2 → Alcohol Flush → JOYN." End card: "Link in bio — use code TIKTOK15"',
-    cta: 'Link in Bio — Code TIKTOK15',
-    note: 'In-Feed + Spark Ads on organic posts with >3% engagement. Daily budget: $50–100/day.',
-  },
+  { id:1, platform:'Meta', stage:'Awareness', hook: "Your face turns red when you drink. There's a genetic reason — and a real solution.", headline: 'Finally. A real solution for alcohol flush.', body: '600 million people have ALDH2 deficiency — the genetic reason your face turns red when you drink. For years, the only option was Pepcid AC, an antacid used off-label that damages your stomach. Joyn is the first supplement formulated specifically for ALDH2. Woman-founded. USA-made.', cta: 'Learn More', note: 'Target: Asian-American 21–40, wellness, social dining. CPM target <$10.' },
+  { id:2, platform:'Meta', stage:'Conversion', hook: 'Stop hiding at celebrations. Start showing up fully.', headline: 'Confidence in a capsule. 15% off your first order.', body: "Joyn supports ALDH2 enzyme activity so you can show up fully — at weddings, work events, first dates, wherever. Take 2 capsules 30 min before drinking. Join thousands of customers living flush-free. Use code JOYN15.", cta: 'Shop Now — Code JOYN15', note: 'Retarget: 50%+ video viewers, site visitors, cart abandoners. CPA target <$35.' },
+  { id:3, platform:'Meta', stage:'Retention', hook: 'Never run out. Never miss a celebration.', headline: 'Subscribe & Save 20% — free shipping every bottle.', body: "You've found your answer. Make sure you never run out. Joyn Subscribe & Save: 20% off every order, free shipping, cancel anytime. Confidence in a capsule, every month.", cta: 'Subscribe & Save', note: 'Target: past purchasers only. LTV target >$120.' },
+  { id:4, platform:'TikTok', stage:'Awareness', hook: 'POV: You finally have a real answer to alcohol flush', headline: '600M people have ALDH2 deficiency. Joyn was built for them.', body: 'UGC-style. Creator holds Joyn bottle, explains ALDH2 in 15s, cuts to event scene looking confident. Text overlay: "ALDH2 → Alcohol Flush → JOYN." End card: "Link in bio — use code TIKTOK15"', cta: 'Link in Bio — Code TIKTOK15', note: 'In-Feed + Spark Ads on organic posts with >3% engagement. Daily budget: $50–100/day.' },
 ]
 
-// ── brand ─────────────────────────────────────────────────────────────────────
 const COLORS = [
   { name: 'Joyn Orange', hex: '#FD5C1E', use: 'CTAs, hero, energy' },
-  { name: 'Joyn Red', hex: '#D72C0D', use: 'Urgency, gradients' },
-  { name: 'Navy', hex: '#003882', use: 'Trust, authority' },
-  { name: 'Sky Blue', hex: '#87ADEF', use: 'Soft accent' },
-  { name: 'Cream', hex: '#FFF8F4', use: 'Page backgrounds' },
-  { name: 'Dark', hex: '#0D0D0D', use: 'Primary text' },
+  { name: 'Joyn Red',    hex: '#D72C0D', use: 'Urgency, gradients' },
+  { name: 'Navy',        hex: '#003882', use: 'Trust, authority' },
+  { name: 'Sky Blue',    hex: '#87ADEF', use: 'Soft accent' },
+  { name: 'Cream',       hex: '#FFF8F4', use: 'Page backgrounds' },
+  { name: 'Dark',        hex: '#0D0D0D', use: 'Primary text' },
 ]
+
 const TAGLINES = [
-  { line: 'Confidence in a capsule.', note: 'Primary — use everywhere' },
-  { line: 'Reshape the way you celebrate.', note: 'Brand mission statement' },
-  { line: 'Red wine. Not red face.', note: 'TikTok hooks, short-form' },
+  { line: 'Confidence in a capsule.',              note: 'Primary — use everywhere' },
+  { line: 'Reshape the way you celebrate.',        note: 'Brand mission statement' },
+  { line: 'Red wine. Not red face.',               note: 'TikTok hooks, short-form' },
   { line: 'More confident nights, brighter mornings.', note: 'Full benefit arc' },
   { line: 'Confidence you can see. Redness you cannot.', note: 'Visual contrast ads' },
-  { line: 'Celebrate without limits.', note: 'Campaign tagline' },
+  { line: 'Celebrate without limits.',             note: 'Campaign tagline' },
 ]
 
 // ── page ──────────────────────────────────────────────────────────────────────
-type PF = 'All' | Platform
-
 export default function Home() {
-  // ── state ────────────────────────────────────────────────────────────────────
-  const [now, setNow]               = useState<Date | null>(null)
-  const [posted, setPosted]         = useState<Set<number>>(new Set())
-  const [edits, setEdits]           = useState<Record<number, string>>({})
-  const [notes, setNotes]           = useState<Record<number, string>>({})
-  const [editing, setEditing]       = useState<number | null>(null)
-  const [sel, setSel]               = useState<number | null>(null)
-  const [pf, setPf]                 = useState<PF>('All')
-  const [hidePosted, setHidePosted] = useState(false)
-  const [search, setSearch]         = useState('')
+  // ── state ─────────────────────────────────────────────────────────────────
+  const [now,         setNow]         = useState<Date | null>(null)
+  const [posts,       setPosts]       = useState<Post[]>([])
+  const [posted,      setPosted]      = useState<Set<string>>(new Set())
+  const [notes,       setNotes]       = useState<Record<string, string>>({})
+  const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [addingPost,  setAddingPost]  = useState<Post | null>(null)
+  const [viewMonth,   setViewMonth]   = useState({ year: 2026, month: 1 })
+  const [selDate,     setSelDate]     = useState<string | null>(null)
+  const [pf,          setPf]          = useState<PF>('All')
+  const [hidePosted,  setHidePosted]  = useState(false)
+  const [search,      setSearch]      = useState('')
 
-  // ── load from localStorage + set live date ───────────────────────────────────
+  // ── init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    setNow(new Date())
+    const n = new Date()
+    setNow(n)
+    setViewMonth({ year: n.getFullYear(), month: n.getMonth() })
     try {
-      const p = localStorage.getItem('joyn-posted')
-      if (p) setPosted(new Set(JSON.parse(p)))
-      const e = localStorage.getItem('joyn-edits')
-      if (e) setEdits(JSON.parse(e))
-      const n = localStorage.getItem('joyn-notes')
-      if (n) setNotes(JSON.parse(n))
-    } catch {}
+      // posts
+      const sp = localStorage.getItem('joyn-posts-v2')
+      setPosts(sp ? JSON.parse(sp) : SEED)
+      // posted
+      const sv = localStorage.getItem('joyn-posted')
+      if (sv) setPosted(new Set(JSON.parse(sv).map(String)))
+      // notes
+      const sn = localStorage.getItem('joyn-notes')
+      if (sn) setNotes(JSON.parse(sn))
+    } catch {
+      setPosts(SEED)
+    }
   }, [])
 
-  // ── date (client-only — never frozen at build time) ──────────────────────────
-  const IN_FEB   = now ? now.getMonth() === 1 && now.getFullYear() === 2026 : false
-  const TODAY    = IN_FEB && now ? now.getDate() : 0
-  const TODAY_STR = IN_FEB && now
-    ? `${DAY_NAMES[now.getDay()]}, February ${now.getDate()}`
-    : 'February 2026'
-  const weekNum  = IN_FEB && now ? Math.min(Math.ceil(now.getDate() / 7), 4) : 1
+  // ── post CRUD ─────────────────────────────────────────────────────────────
+  const savePosts = (next: Post[]) => {
+    setPosts(next)
+    localStorage.setItem('joyn-posts-v2', JSON.stringify(next))
+  }
+  const updatePost = (p: Post) => savePosts(posts.map(x => x.id === p.id ? p : x))
+  const deletePost = (id: string) => savePosts(posts.filter(x => x.id !== id))
+  const addPost    = (p: Post) => savePosts([...posts, { ...p, id: newId() }].sort((a, b) => a.date.localeCompare(b.date)))
 
-  // ── actions ──────────────────────────────────────────────────────────────────
-  const togglePosted = (id: number) => {
+  const togglePosted = (id: string) => {
     setPosted(prev => {
       const next = new Set(prev)
       if (next.has(id)) { next.delete(id) } else { next.add(id) }
@@ -898,58 +946,79 @@ export default function Home() {
     })
   }
 
-  const getCaption = (p: Post) => edits[p.id] ?? p.caption
-
-  const saveEdit = (id: number, text: string) => {
-    const next = { ...edits, [id]: text }
-    setEdits(next)
-    localStorage.setItem('joyn-edits', JSON.stringify(next))
-    setEditing(null)
-  }
-
-  const saveNote = (id: number, text: string) => {
+  const saveNote = (id: string, text: string) => {
     const next = { ...notes, [id]: text }
     setNotes(next)
     localStorage.setItem('joyn-notes', JSON.stringify(next))
   }
 
-  // ── computed ─────────────────────────────────────────────────────────────────
-  const todayPosts  = POSTS.filter(p => p.day === TODAY)
-  const upNext      = POSTS.filter(p => p.day > TODAY && p.day <= TODAY + 5)
-  const selPosts    = sel ? POSTS.filter(p => p.day === sel) : []
-  const totalPosted = posted.size
-  const editedCount = Object.keys(edits).length
-  const noteCount   = Object.values(notes).filter(n => n.trim()).length
+  // ── derived date values ───────────────────────────────────────────────────
+  const todayStr = now ? nowDateStr(now) : ''
+  const todayPosts = posts.filter(p => p.date === todayStr)
+  const upcomingPosts = now ? posts
+    .filter(p => p.date > todayStr && p.date <= addDays(todayStr, 6))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5) : []
+  const totalPosted  = posted.size
+  const totalPosts   = posts.length
+  const noteCount    = Object.values(notes).filter(n => n.trim()).length
 
-  const filteredLib = POSTS
+  // ── calendar ──────────────────────────────────────────────────────────────
+  const { year: calYear, month: calMonth } = viewMonth
+  const daysInMo  = new Date(calYear, calMonth + 1, 0).getDate()
+  const firstDay  = new Date(calYear, calMonth, 1).getDay()
+  const monthLabel = `${MONTH_NAMES[calMonth]} ${calYear}`
+  const prevMonth = () => setViewMonth(m => m.month === 0  ? { year: m.year - 1, month: 11 } : { year: m.year, month: m.month - 1 })
+  const nextMonth = () => setViewMonth(m => m.month === 11 ? { year: m.year + 1, month: 0  } : { year: m.year, month: m.month + 1 })
+  const calDayStr = (d: number) => toDateStr(calYear, calMonth, d)
+  const monthPosts = posts.filter(p => {
+    const [y, m] = p.date.split('-').map(Number)
+    return y === calYear && m - 1 === calMonth
+  })
+  const selPosts = selDate ? posts.filter(p => p.date === selDate) : []
+  const totalCells = Math.ceil((firstDay + daysInMo) / 7) * 7
+
+  // ── caption library ───────────────────────────────────────────────────────
+  const filteredLib = posts
     .filter(p => pf === 'All' || p.platform === pf)
     .filter(p => !hidePosted || !posted.has(p.id))
-    .filter(p => !search || [p.hook, getCaption(p)].some(t => t.toLowerCase().includes(search.toLowerCase())))
+    .filter(p => !search || [p.hook, p.caption].some(t => t.toLowerCase().includes(search.toLowerCase())))
+    .sort((a, b) => a.date.localeCompare(b.date))
 
+  // ── blank post for "Add Post" ─────────────────────────────────────────────
+  const blankPost = (date?: string): Post => ({
+    id: '', date: date ?? todayStr, platform: 'TikTok', format: '', hook: '', shoot: '', caption: '',
+  })
+
+  // ── render ────────────────────────────────────────────────────────────────
   return (
-    <main>
+    <main className="min-h-screen bg-[#fafafa]">
+
+      {/* Modals */}
+      {editingPost && (
+        <PostEditor post={editingPost} onSave={updatePost} onDelete={deletePost}
+          onClose={() => setEditingPost(null)} />
+      )}
+      {addingPost && (
+        <PostEditor post={addingPost} onSave={addPost} isNew
+          onClose={() => setAddingPost(null)} />
+      )}
 
       <SetupBanner />
 
-      {/* ── TODAY ────────────────────────────────────────────────────── */}
+      {/* ── TODAY ──────────────────────────────────────────────────────── */}
       <section id="today" className="section-anchor border-b border-gray-100">
 
-        {/* Date + stats bar */}
-        <div className="bg-white border-b border-gray-100 px-6 lg:px-16 py-6">
+        {/* Stats bar */}
+        <div className="bg-white border-b border-gray-100 px-6 lg:px-16 py-5">
           <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
             <div>
-              <p className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-1">
-                {IN_FEB ? `Week ${weekNum} · ${WEEK_THEMES[weekNum - 1]}` : 'February 2026 Playbook'}
-              </p>
-              <h1 className="text-3xl lg:text-4xl font-black text-[#0a0a0a] leading-none">{TODAY_STR}</h1>
+              <p className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-1">Today</p>
+              <h1 className="text-2xl lg:text-3xl font-black text-[#0a0a0a] leading-none">
+                {now ? `${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}` : '—'}
+              </h1>
             </div>
-            <div className="flex items-center gap-6 flex-wrap">
-              {editedCount > 0 && (
-                <div className="text-right">
-                  <div className="text-xl font-black text-amber-500">{editedCount}</div>
-                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">edited</div>
-                </div>
-              )}
+            <div className="flex items-center gap-5 flex-wrap">
               {noteCount > 0 && (
                 <div className="text-right">
                   <div className="text-xl font-black text-[#003882]">{noteCount}</div>
@@ -957,93 +1026,64 @@ export default function Home() {
                 </div>
               )}
               <div className="text-right">
-                <div className="text-xl font-black text-[#0a0a0a]">{totalPosted}<span className="text-sm text-gray-300 font-normal">/28</span></div>
+                <div className="text-xl font-black text-[#0a0a0a]">{totalPosted}<span className="text-sm text-gray-300 font-normal">/{totalPosts}</span></div>
                 <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">published</div>
               </div>
-              <div className="w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-[#FD5C1E] rounded-full transition-all duration-500"
-                  style={{ width: `${(totalPosted / 28) * 100}%` }} />
+                  style={{ width: totalPosts ? `${(totalPosted / totalPosts) * 100}%` : '0%' }} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Posts */}
-        <div className="px-6 lg:px-16 py-8 bg-[#fafafa]">
+        {/* Posts for today */}
+        <div className="px-6 lg:px-16 py-8">
           <div className="max-w-screen-xl mx-auto">
 
-            {!IN_FEB && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-                <p className="text-[#FD5C1E] text-xs font-black uppercase tracking-widest mb-3">February 2026 Content Playbook</p>
-                <p className="text-2xl font-black text-[#0a0a0a] mb-2">28 posts. Every caption ready.</p>
-                <p className="text-gray-400 text-sm">Browse the Calendar and Caption Library below — click any day or post to see the full copy.</p>
-              </div>
-            )}
-
-            {IN_FEB && todayPosts.length === 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-                <p className="text-xl font-black text-[#0a0a0a] mb-2">No posts scheduled today.</p>
-                <p className="text-gray-400 text-sm">Check the calendar below for what&apos;s coming up.</p>
+            {todayPosts.length === 0 && (
+              <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center mb-6">
+                {now ? (
+                  <>
+                    <p className="text-lg font-black text-[#0a0a0a] mb-2">No posts scheduled today.</p>
+                    <p className="text-gray-400 text-sm mb-4">Use the calendar below to see what&apos;s coming up, or add a post for today.</p>
+                    <button onClick={() => setAddingPost(blankPost(todayStr))}
+                      className="bg-[#FD5C1E] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all">
+                      + Add Post for Today
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-gray-400">Loading...</p>
+                )}
               </div>
             )}
 
             <div className="space-y-4">
               {todayPosts.map(p => (
                 <div key={p.id}
-                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden transition-all ${
-                    posted.has(p.id)
-                      ? 'border-l-green-400 border-green-100 opacity-60'
-                      : 'border-gray-100 hover:border-gray-200'
-                  }`}
-                  style={!posted.has(p.id) ? { borderLeftColor: PC[p.platform] } : undefined}
-                >
+                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden transition-all ${posted.has(p.id) ? 'border-l-green-400 border-green-100 opacity-60' : 'border-gray-100'}`}
+                  style={!posted.has(p.id) ? { borderLeftColor: PC[p.platform] } : undefined}>
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4 gap-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Plat p={p.platform} />
-                        <span className="text-xs font-semibold text-gray-400">{p.format}</span>
-                        {edits[p.id] && (
-                          <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Edited</span>
-                        )}
-                        {notes[p.id]?.trim() && (
-                          <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>
-                        )}
+                        {p.format && <span className="text-xs font-semibold text-gray-400">{p.format}</span>}
+                        {notes[p.id]?.trim() && <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>}
                       </div>
-                      <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => setEditingPost(p)} className="text-xs font-bold text-gray-400 hover:text-[#FD5C1E] transition-colors px-2 py-1 border border-gray-200 rounded-lg hover:border-[#FD5C1E]">Edit Post</button>
+                        <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
+                      </div>
                     </div>
-
-                    <h2 className="text-2xl lg:text-3xl font-black text-[#0a0a0a] mb-4 leading-tight">
-                      &ldquo;{p.hook}&rdquo;
-                    </h2>
-
+                    <h2 className="text-xl lg:text-2xl font-black text-[#0a0a0a] mb-3 leading-tight">&ldquo;{p.hook}&rdquo;</h2>
                     <ShootBrief text={p.shoot} />
                     <WarnBanner warn={p.warn} promoCode={p.promoCode} />
-
-                    {editing === p.id ? (
-                      <EditCaption
-                        id={p.id}
-                        text={getCaption(p)}
-                        original={p.caption}
-                        onSave={saveEdit}
-                        onCancel={() => setEditing(null)}
-                      />
-                    ) : (
-                      <div className="mt-4">
-                        <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">
-                          {getCaption(p)}
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <CopyFull text={getCaption(p)} />
-                          <button
-                            onClick={() => setEditing(p.id)}
-                            className="px-5 py-3 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all whitespace-nowrap"
-                          >
-                            Edit
-                          </button>
-                        </div>
+                    <div className="mt-4">
+                      <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">{p.caption}</div>
+                      <div className="mt-3">
+                        <CopyFull text={p.caption} />
                       </div>
-                    )}
-
+                    </div>
                     <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
                   </div>
                 </div>
@@ -1051,19 +1091,19 @@ export default function Home() {
             </div>
 
             {/* Up Next */}
-            {IN_FEB && upNext.length > 0 && (
+            {upcomingPosts.length > 0 && (
               <div className="mt-8">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Coming up</p>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {upNext.map(u => (
+                  {upcomingPosts.map(u => (
                     <button key={u.id}
-                      onClick={() => { setSel(u.day); document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' }) }}
+                      onClick={() => { setSelDate(u.date); setViewMonth({ year: parseInt(u.date.slice(0,4)), month: parseInt(u.date.slice(5,7))-1 }); document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' }) }}
                       className="bg-white rounded-xl border border-gray-100 p-4 text-left hover:border-[#FD5C1E] transition-all group">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-black text-gray-400">Feb {u.day}</span>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PC[u.platform] }} />
+                        <span className="text-xs font-black text-gray-400">{formatDisplayDate(u.date).slice(0,-6)}</span>
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PC[u.platform] }} />
                       </div>
-                      <p className="text-xs font-bold text-[#0a0a0a] leading-snug group-hover:text-[#FD5C1E] transition-colors line-clamp-3">{u.hook}</p>
+                      <p className="text-xs font-bold text-[#0a0a0a] leading-snug group-hover:text-[#FD5C1E] transition-colors line-clamp-2">{u.hook}</p>
                     </button>
                   ))}
                 </div>
@@ -1073,15 +1113,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CALENDAR ─────────────────────────────────────────────────── */}
+      {/* ── CALENDAR ───────────────────────────────────────────────────── */}
       <section id="calendar" className="section-anchor px-6 lg:px-16 py-16 bg-[#FFF8F4] border-b border-orange-100">
         <div className="max-w-screen-xl mx-auto">
-          <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
+
+          <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
             <div>
               <p className="text-xs font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-2">Content Calendar</p>
-              <h2 className="text-4xl font-black text-[#0a0a0a]">February 2026.</h2>
+              <div className="flex items-center gap-3">
+                <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-orange-100 hover:border-[#FD5C1E] text-gray-500 hover:text-[#FD5C1E] transition-all text-lg">‹</button>
+                <h2 className="text-3xl font-black text-[#0a0a0a]">{monthLabel}</h2>
+                <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-orange-100 hover:border-[#FD5C1E] text-gray-500 hover:text-[#FD5C1E] transition-all text-lg">›</button>
+                {now && (calYear !== now.getFullYear() || calMonth !== now.getMonth()) && (
+                  <button onClick={() => setViewMonth({ year: now.getFullYear(), month: now.getMonth() })}
+                    className="text-xs font-bold text-[#FD5C1E] hover:underline">Today</button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-4 pb-1">
+            <div className="flex items-center gap-4">
               {Object.entries({ TikTok: '#FD5C1E', Instagram: '#E1306C', Pinterest: '#E60023' }).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: v }} />{k}
@@ -1091,126 +1140,134 @@ export default function Home() {
           </div>
 
           <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
+            {/* Day headers */}
             <div className="grid grid-cols-7 border-b border-orange-50">
-              {['SUN','MON','TUE','WED','THU','FRI','SAT'].map(d => (
+              {DAY_NAMES.map(d => (
                 <div key={d} className="py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">{d}</div>
               ))}
             </div>
-            {[1,2,3,4].map(wi => {
-              const weekDays = Array.from({length:7}, (_,i) => (wi-1)*7+i+1)
-              return (
-                <div key={wi}>
-                  <div className="px-4 py-1.5 bg-orange-50/60 border-y border-orange-100/60">
-                    <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">
-                      Week {wi} — {WEEK_THEMES[wi-1]}
-                    </span>
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7">
+              {Array.from({ length: totalCells }, (_, i) => {
+                const dayNum = i - firstDay + 1
+                const isValid = dayNum >= 1 && dayNum <= daysInMo
+                const ds = isValid ? calDayStr(dayNum) : ''
+                const dayPosts = isValid ? monthPosts.filter(p => p.date === ds) : []
+                const isToday = ds === todayStr
+                const isSel   = ds === selDate
+                const allDone = dayPosts.length > 0 && dayPosts.every(p => posted.has(p.id))
+                return (
+                  <div key={i} className={`min-h-[88px] border-b border-r border-orange-50 last:border-r-0 transition-all ${isValid ? (isSel ? 'ring-2 ring-inset ring-[#FD5C1E]' : '') : 'bg-gray-50/30'}`}>
+                    {isValid && (
+                      <button className={`w-full h-full p-2.5 text-left ${isToday ? 'bg-orange-50/60' : 'hover:bg-orange-50/40'} transition-all`}
+                        onClick={() => setSelDate(ds === selDate ? null : ds)}>
+                        <div className={`text-xs font-black mb-1.5 flex items-center gap-1.5 ${isToday ? 'text-[#FD5C1E]' : 'text-gray-300'}`}>
+                          {dayNum}
+                          {isToday && <span className="text-[9px] bg-[#FD5C1E] text-white px-1.5 py-0.5 rounded font-black leading-none">TODAY</span>}
+                          {allDone && <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded font-black leading-none">✓</span>}
+                        </div>
+                        <div className="space-y-0.5">
+                          {dayPosts.map(dp => (
+                            <div key={dp.id} className="flex items-start gap-1">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[3px] ${posted.has(dp.id) ? 'opacity-30' : ''}`}
+                                style={{ backgroundColor: PC[dp.platform] }} />
+                              <span className={`text-[10px] leading-tight line-clamp-2 ${posted.has(dp.id) ? 'text-gray-300 line-through' : 'text-gray-500'}`}>{dp.hook}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-7 divide-x divide-orange-50">
-                    {weekDays.map(dayNum => {
-                      const dayPosts = POSTS.filter(p => p.day === dayNum)
-                      const allDone  = dayPosts.length > 0 && dayPosts.every(p => posted.has(p.id))
-                      return (
-                        <button key={dayNum}
-                          onClick={() => setSel(sel === dayNum ? null : dayNum)}
-                          className={`text-left p-3 min-h-[88px] transition-all border-b border-orange-50 ${
-                            dayNum === TODAY ? 'bg-[#FD5C1E]/8' : 'hover:bg-orange-50/50'
-                          } ${sel === dayNum ? 'ring-2 ring-inset ring-[#FD5C1E]' : ''}`}>
-                          <div className={`text-xs font-black mb-1.5 flex items-center gap-1.5 ${dayNum === TODAY ? 'text-[#FD5C1E]' : 'text-gray-300'}`}>
-                            {dayNum}
-                            {dayNum === TODAY && <span className="text-[9px] bg-[#FD5C1E] text-white px-1.5 py-0.5 rounded font-black leading-none">TODAY</span>}
-                            {allDone && <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded font-black leading-none">✓</span>}
-                          </div>
-                          <div className="space-y-1">
-                            {dayPosts.map(dp => (
-                              <div key={dp.id} className="flex items-start gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[3px] transition-opacity ${posted.has(dp.id) ? 'opacity-30' : ''}`}
-                                  style={{ backgroundColor: PC[dp.platform] }} />
-                                <span className={`text-[10px] leading-tight line-clamp-2 transition-colors ${posted.has(dp.id) ? 'text-gray-300 line-through' : 'text-gray-500'}`}>
-                                  {dp.hook}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Add Post CTA below calendar */}
+          <div className="mt-3 flex justify-end">
+            <button onClick={() => setAddingPost(blankPost(selDate ?? todayStr))}
+              className="flex items-center gap-2 text-sm font-bold text-[#FD5C1E] hover:underline">
+              + Add Post
+            </button>
           </div>
 
           {/* Expanded day */}
-          {sel && selPosts.length > 0 && (
+          {selDate && (
             <div className="mt-4 bg-white border-2 border-[#FD5C1E] rounded-2xl overflow-hidden">
               <div className="px-6 py-4 border-b border-orange-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-black text-[#0a0a0a] text-lg">February {sel}</h3>
-                  <span className="text-xs font-bold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">
-                    {WEEK_THEMES[selPosts[0].week - 1]}
-                  </span>
+                  <h3 className="font-black text-[#0a0a0a] text-lg">{formatDisplayDate(selDate)}</h3>
+                  {selDate === todayStr && <span className="text-xs bg-[#FD5C1E] text-white px-2.5 py-0.5 rounded-full font-black">TODAY</span>}
                 </div>
-                <button onClick={() => setSel(null)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors text-lg">
-                  ×
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setAddingPost(blankPost(selDate))}
+                    className="text-xs font-bold text-[#FD5C1E] border border-orange-200 hover:border-[#FD5C1E] px-3 py-1.5 rounded-lg transition-all">
+                    + Add Post
+                  </button>
+                  <button onClick={() => setSelDate(null)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors text-lg">×</button>
+                </div>
               </div>
-              <div className="divide-y divide-orange-50">
-                {selPosts.map(p => (
-                  <div key={p.id} className="p-6">
-                    <div className="flex items-center justify-between mb-4 gap-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Plat p={p.platform} />
-                        <span className="text-xs text-gray-400 font-semibold">{p.format}</span>
-                        {edits[p.id] && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">Edited</span>}
-                      </div>
-                      <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
-                    </div>
-                    <h4 className="font-black text-[#0a0a0a] text-base mb-4 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
-                    <ShootBrief text={p.shoot} />
-                    <WarnBanner warn={p.warn} promoCode={p.promoCode} />
-                    {editing === p.id ? (
-                      <EditCaption id={p.id} text={getCaption(p)} original={p.caption} onSave={saveEdit} onCancel={() => setEditing(null)} />
-                    ) : (
-                      <div className="mt-4">
-                        <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 mb-3">{getCaption(p)}</div>
-                        <div className="flex gap-2">
-                          <CopyFull text={getCaption(p)} />
-                          <button onClick={() => setEditing(p.id)} className="px-4 py-3 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all">Edit</button>
+
+              {selPosts.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-gray-400 text-sm mb-4">No posts scheduled for {formatDisplayDate(selDate)}.</p>
+                  <button onClick={() => setAddingPost(blankPost(selDate))}
+                    className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all">
+                    + Add Post for This Day
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-orange-50">
+                  {selPosts.map(p => (
+                    <div key={p.id} className="p-6">
+                      <div className="flex items-center justify-between mb-4 gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Plat p={p.platform} />
+                          {p.format && <span className="text-xs text-gray-400 font-semibold">{p.format}</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingPost(p)} className="text-xs font-bold text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
+                          <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
                         </div>
                       </div>
-                    )}
-                    <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {sel && selPosts.length === 0 && (
-            <div className="mt-4 bg-white border border-orange-100 rounded-2xl p-6 text-center">
-              <p className="text-gray-400 text-sm">No post scheduled for February {sel}.</p>
-              <button onClick={() => setSel(null)} className="text-xs text-gray-400 hover:text-gray-600 mt-2 underline">Close</button>
+                      <h4 className="font-black text-[#0a0a0a] text-base mb-3 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
+                      <ShootBrief text={p.shoot} />
+                      <WarnBanner warn={p.warn} promoCode={p.promoCode} />
+                      <div className="mt-4">
+                        <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 mb-3">{p.caption}</div>
+                        <CopyFull text={p.caption} />
+                      </div>
+                      <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       </section>
 
-      {/* ── CAPTION LIBRARY ──────────────────────────────────────────── */}
+      {/* ── CAPTION LIBRARY ─────────────────────────────────────────────── */}
       <section id="captions" className="section-anchor px-6 lg:px-16 py-16 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
-          <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Caption Library</p>
-          <h2 className="text-4xl font-black text-[#0a0a0a] mb-2">28 captions. Edit and copy.</h2>
-          <p className="text-gray-400 text-base mb-6">Every caption is editable — changes save locally to your browser.</p>
+          <div className="flex items-end justify-between mb-2 flex-wrap gap-4">
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Caption Library</p>
+              <h2 className="text-4xl font-black text-[#0a0a0a]">{totalPosts} captions. All editable.</h2>
+            </div>
+            <button onClick={() => setAddingPost(blankPost())}
+              className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all whitespace-nowrap">
+              + Add Post
+            </button>
+          </div>
+          <p className="text-gray-400 text-base mb-6">Click Edit Post on any card to change anything — date, platform, caption, everything. Changes save to your browser.</p>
 
           {/* Search + Filters */}
           <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search captions by hook or copy..."
-              className="flex-1 text-sm text-gray-700 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors"
-            />
+              className="flex-1 text-sm text-gray-700 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors" />
             <div className="flex items-center gap-2 flex-wrap">
               {(['All', 'TikTok', 'Instagram', 'Pinterest'] as const).map(f => (
                 <button key={f} onClick={() => setPf(f)}
@@ -1229,40 +1286,34 @@ export default function Home() {
 
           {filteredLib.length === 0 && (
             <div className="text-center py-16 text-gray-400">
-              <p className="text-lg font-bold">No captions match your search.</p>
-              <button onClick={() => { setSearch(''); setPf('All') }} className="text-sm text-[#FD5C1E] mt-2 hover:underline">Clear filters</button>
+              <p className="text-lg font-bold mb-2">No captions match.</p>
+              <button onClick={() => { setSearch(''); setPf('All') }} className="text-sm text-[#FD5C1E] hover:underline">Clear filters</button>
             </div>
           )}
 
           <div className="grid md:grid-cols-2 gap-5">
             {filteredLib.map(cap => (
-              <div key={cap.id} className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col transition-all ${
-                posted.has(cap.id) ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100 hover:border-gray-200'
-              }`} style={!posted.has(cap.id) ? { borderLeftColor: PC[cap.platform] } : undefined}>
+              <div key={cap.id} className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col transition-all ${posted.has(cap.id) ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100 hover:border-gray-200'}`}
+                style={!posted.has(cap.id) ? { borderLeftColor: PC[cap.platform] } : undefined}>
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Plat p={cap.platform} />
-                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Feb {cap.day}</span>
-                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{cap.format}</span>
-                      {edits[cap.id] && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 uppercase tracking-wide">Edited</span>}
+                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{formatDisplayDate(cap.date)}</span>
+                      {cap.format && <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{cap.format}</span>}
                     </div>
-                    <PostedBtn id={cap.id} posted={posted} toggle={togglePosted} />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button onClick={() => setEditingPost(cap)} className="text-[10px] font-bold text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
+                      <PostedBtn id={cap.id} posted={posted} toggle={togglePosted} />
+                    </div>
                   </div>
-                  <h3 className="font-black text-[#0a0a0a] text-base leading-snug mb-3">&ldquo;{cap.hook}&rdquo;</h3>
-                  <ShootBrief text={cap.shoot} />
+                  <h3 className="font-black text-[#0a0a0a] text-sm leading-snug mb-3">&ldquo;{cap.hook}&rdquo;</h3>
+                  {cap.shoot && <ShootBrief text={cap.shoot} />}
                   <WarnBanner warn={cap.warn} promoCode={cap.promoCode} />
-                  {editing === cap.id ? (
-                    <EditCaption id={cap.id} text={getCaption(cap)} original={cap.caption} onSave={saveEdit} onCancel={() => setEditing(null)} />
-                  ) : (
-                    <div className="mt-3 flex-1 flex flex-col">
-                      <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 flex-1 border border-gray-100">{getCaption(cap)}</div>
-                      <div className="flex gap-2 mt-3">
-                        <CopyFull text={getCaption(cap)} />
-                        <button onClick={() => setEditing(cap.id)} className="px-4 py-3 rounded-xl border border-gray-200 text-gray-500 text-sm font-bold hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-all">Edit</button>
-                      </div>
-                    </div>
-                  )}
+                  <div className="mt-3 flex-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">{cap.caption}</div>
+                  <div className="mt-3">
+                    <CopyFull text={cap.caption} />
+                  </div>
                   <NoteArea id={cap.id} notes={notes} saveNote={saveNote} />
                 </div>
               </div>
@@ -1271,7 +1322,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HASHTAGS ─────────────────────────────────────────────────── */}
+      {/* ── HASHTAGS ────────────────────────────────────────────────────── */}
       <section id="hashtags" className="section-anchor px-6 lg:px-16 py-16 bg-gray-50 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Hashtag Sets</p>
@@ -1285,15 +1336,13 @@ export default function Home() {
                     <h3 className="font-black text-[#0a0a0a] mb-1">{set.name}</h3>
                     <p className="text-xs text-gray-400 mb-4">{set.desc}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {raw.slice(0, 8).map((t) => (
+                      {raw.slice(0, 8).map(t => (
                         <span key={t.trim()} className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full font-mono">{t.trim()}</span>
                       ))}
                       {raw.length > 8 && <span className="text-xs text-gray-400 self-center">+{raw.length - 8} more</span>}
                     </div>
                   </div>
-                  <div className="px-5 pb-5">
-                    <CopyAll text={set.tags} />
-                  </div>
+                  <div className="px-5 pb-5"><CopyAll text={set.tags} /></div>
                 </div>
               )
             })}
@@ -1301,7 +1350,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── ADS ──────────────────────────────────────────────────────── */}
+      {/* ── ADS ─────────────────────────────────────────────────────────── */}
       <section id="ads" className="section-anchor px-6 lg:px-16 py-16 bg-[#0a0a0a] border-b border-gray-800">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-600 uppercase tracking-[0.2em] mb-3">Ad Copy</p>
@@ -1343,14 +1392,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── BRAND ────────────────────────────────────────────────────── */}
+      {/* ── BRAND ───────────────────────────────────────────────────────── */}
       <section id="brand" className="section-anchor px-6 lg:px-16 py-16">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Brand Kit</p>
           <h2 className="text-4xl font-black text-[#0a0a0a] mb-12">How Joyn looks. How Joyn sounds.</h2>
           <div className="grid lg:grid-cols-3 gap-12">
 
-            {/* Colors + Type */}
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Colors — click to copy hex</h3>
               <div className="grid grid-cols-3 gap-3 mb-4">
@@ -1386,7 +1434,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Voice */}
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Voice — DO / DON&apos;T</h3>
               <div className="space-y-3 mb-10">
@@ -1414,7 +1461,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Taglines */}
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Tagline Bank</h3>
               <div className="space-y-0">
@@ -1442,20 +1488,13 @@ export default function Home() {
       <footer className="px-6 lg:px-16 py-10 bg-[#0a0a0a]">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
           <div>
-            <div className="text-white font-black">JOYN · 2026 Social Playbook</div>
-            <div className="text-gray-600 text-xs mt-1">28 posts · all platforms · copy-ready · progress saved in your browser</div>
+            <div className="text-white font-black">JOYN · Social Playbook</div>
+            <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · all platforms · copy-ready · editable · saves to your browser</div>
           </div>
           <div className="flex items-center gap-5">
-            <button
-              onClick={() => {
-                if (confirm('Reset all posted progress? This cannot be undone.')) {
-                  localStorage.removeItem('joyn-posted')
-                  setPosted(new Set())
-                }
-              }}
-              className="text-gray-600 text-xs font-semibold hover:text-gray-400 transition-colors"
-            >
-              Reset progress
+            <button onClick={() => { if (window.confirm('Reset all data to defaults? This will delete any custom posts, edits, and progress.')) { localStorage.clear(); window.location.reload() } }}
+              className="text-gray-600 text-xs font-semibold hover:text-gray-400 transition-colors">
+              Reset all data
             </button>
             <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
               className="text-[#FD5C1E] text-sm font-bold hover:underline">
