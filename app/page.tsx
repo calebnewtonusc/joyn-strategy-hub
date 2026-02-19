@@ -1,12 +1,17 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
+
+const EASE = [0.22, 1, 0.36, 1] as const
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const DAY_NAMES   = ['S','M','T','W','T','F','S']
 const DAY_FULL    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
-const PC: Record<string, string> = { TikTok: '#FD5C1E', Instagram: '#E1306C', Pinterest: '#E60023' }
+const PC:       Record<string, string> = { TikTok: '#FD5C1E', Instagram: '#E1306C', Pinterest: '#E60023' }
+const PC_LIGHT: Record<string, string> = { TikTok: '#fff4f0', Instagram: '#fdf2f8', Pinterest: '#fff1f2' }
+const PC_BORDER:Record<string, string> = { TikTok: '#fdc9b0', Instagram: '#fbb6ce', Pinterest: '#fecaca' }
 
 // ── types ─────────────────────────────────────────────────────────────────────
 type Platform = 'TikTok' | 'Instagram' | 'Pinterest'
@@ -98,7 +103,7 @@ function CopyFull({ text }: { text: string }) {
   const [ok, setOk] = useState(false)
   const go = () => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 2000) }
   return (
-    <button onClick={go} className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wide transition-all ${ok ? 'bg-green-500 text-white' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18]'}`}>
+    <button onClick={go} className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wide transition-all ${ok ? 'bg-green-500 text-white' : 'bg-[#FD5C1E] text-white hover:bg-[#e54d18] btn-brand'}`}>
       {ok ? '✓ COPIED TO CLIPBOARD' : 'COPY CAPTION'}
     </button>
   )
@@ -116,7 +121,13 @@ function CopyAll({ text }: { text: string }) {
 
 function Plat({ p }: { p: string }) {
   return (
-    <span className="inline-flex items-center text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full text-white" style={{ backgroundColor: PC[p] }}>
+    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
+      style={{
+        backgroundColor: PC_LIGHT[p] ?? '#f5f5f5',
+        border: `1px solid ${PC_BORDER[p] ?? '#e5e7eb'}`,
+        color: PC[p] ?? '#555',
+      }}>
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: PC[p] }} />
       {p}
     </span>
   )
@@ -124,7 +135,10 @@ function Plat({ p }: { p: string }) {
 
 function PostedBtn({ id, is_posted, toggle }: { id: string; is_posted: boolean; toggle: (id: string) => void }) {
   return (
-    <button onClick={() => toggle(id)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${is_posted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'}`}>
+    <button
+      onClick={() => toggle(id)}
+      className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${is_posted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'}`}
+      style={is_posted ? { boxShadow: '0 2px 8px rgba(34,197,94,0.2)' } : undefined}>
       {is_posted ? '✓ Posted' : '○ Mark posted'}
     </button>
   )
@@ -189,14 +203,48 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
   post: Post; onSave: (p: Post) => void; onDelete?: (id: string) => void
   onClose: () => void; isNew?: boolean
 }) {
-  const [form, setForm] = useState<Post>({ ...post })
+  const [form,      setForm]      = useState<Post>({ ...post })
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const up = <K extends keyof Post>(k: K, v: Post[K]) => setForm(f => ({ ...f, [k]: v }))
   const valid = form.date && form.hook.trim() && form.caption.trim()
 
+  const handleSave = () => {
+    if (!valid || saveState !== 'idle') return
+    setSaveState('saving')
+    onSave(form)
+    setTimeout(() => {
+      setSaveState('saved')
+      setTimeout(() => { setSaveState('idle'); onClose() }, 700)
+    }, 350)
+  }
+
+  const saveBtnStyle = saveState === 'saved'
+    ? 'bg-green-500 text-white'
+    : saveState === 'saving'
+    ? 'bg-[#FD5C1E]/70 text-white cursor-wait'
+    : valid
+    ? 'bg-[#FD5C1E] text-white hover:bg-[#e54d18] btn-brand'
+    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+
+  const saveBtnLabel = saveState === 'saved'
+    ? '✓ Saved'
+    : saveState === 'saving'
+    ? (isNew ? 'Adding...' : 'Saving...')
+    : (isNew ? 'Add Post' : 'Save Changes')
+
   return (
     <div className="fixed inset-0 z-50 flex" style={{ fontFamily: 'inherit' }}>
-      <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="w-full sm:max-w-lg bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
+      <motion.div
+        className="flex-1 bg-black/50 backdrop-blur-sm"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="w-full sm:max-w-lg bg-white h-full overflow-y-auto shadow-2xl flex flex-col"
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+      >
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <h2 className="font-black text-[#0a0a0a] text-lg">{isNew ? '+ Add Post' : 'Edit Post'}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">✕</button>
@@ -218,7 +266,7 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
               {(['TikTok', 'Instagram', 'Pinterest'] as const).map(p => (
                 <button key={p} onClick={() => up('platform', p)}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${form.platform === p ? 'text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                  style={form.platform === p ? { backgroundColor: PC[p] } : undefined}>
+                  style={form.platform === p ? { backgroundColor: PC[p], boxShadow: `0 3px 10px ${PC[p]}50` } : undefined}>
                   {p}
                 </button>
               ))}
@@ -249,9 +297,9 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
           </label>
         </div>
         <div className="px-6 pb-6 pt-4 border-t border-gray-100 space-y-2 sticky bottom-0 bg-white">
-          <button onClick={() => { if (valid) { onSave(form); onClose() } }}
-            className={`w-full py-3.5 rounded-xl font-black text-sm transition-all ${valid ? 'bg-[#FD5C1E] text-white hover:bg-[#e54d18]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
-            {isNew ? 'Add Post' : 'Save Changes'}
+          <button onClick={handleSave}
+            className={`w-full py-3.5 rounded-xl font-black text-sm transition-all ${saveBtnStyle}`}>
+            {saveBtnLabel}
           </button>
           {!isNew && onDelete && (
             <button onClick={() => { if (window.confirm('Delete this post? This cannot be undone.')) { onDelete(form.id); onClose() } }}
@@ -260,7 +308,7 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
@@ -527,10 +575,11 @@ export default function Home() {
   // ── render ────────────────────────────────────────────────────────────────
   if (loading) return (
     <main className="min-h-screen bg-[#fafafa] flex items-center justify-center pt-14">
-      <div className="text-center">
-        <div className="w-8 h-8 rounded-full bg-[#FD5C1E] mx-auto mb-4 animate-pulse" />
+      <motion.div className="text-center" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, ease: EASE }}>
+        <div className="w-8 h-8 rounded-full bg-[#FD5C1E] mx-auto mb-4 animate-pulse"
+          style={{ boxShadow: '0 4px 16px rgba(253,92,30,0.3)' }} />
         <p className="text-sm text-gray-400 font-medium">Loading strategy hub...</p>
-      </div>
+      </motion.div>
     </main>
   )
 
@@ -538,8 +587,10 @@ export default function Home() {
     <main className="min-h-screen bg-[#fafafa] pt-14">
 
       {/* Modals */}
-      {editingPost && <PostEditor post={editingPost} onSave={updatePost} onDelete={deletePost} onClose={() => setEditingPost(null)} />}
-      {addingPost  && <PostEditor post={addingPost}  onSave={addPost}    isNew              onClose={() => setAddingPost(null)}  />}
+      <AnimatePresence>
+        {editingPost && <PostEditor key="edit" post={editingPost} onSave={updatePost} onDelete={deletePost} onClose={() => setEditingPost(null)} />}
+        {addingPost  && <PostEditor key="add"  post={addingPost}  onSave={addPost}    isNew              onClose={() => setAddingPost(null)}  />}
+      </AnimatePresence>
 
       <SetupBanner hasSupabase={USE_SB} />
 
@@ -585,7 +636,7 @@ export default function Home() {
                     <p className="text-lg font-black text-[#0a0a0a] mb-2">No posts scheduled today.</p>
                     <p className="text-gray-400 text-sm mb-4">Use the calendar below to see what&apos;s coming up, or add a post for today.</p>
                     <button onClick={() => setAddingPost(blankPost(todayStr))}
-                      className="bg-[#FD5C1E] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all">
+                      className="bg-[#FD5C1E] text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] btn-brand">
                       + Add Post for Today
                     </button>
                   </>
@@ -595,15 +646,17 @@ export default function Home() {
               </div>
             )}
             <div className="space-y-4">
-              {todayPosts.map(p => (
-                <div key={p.id}
-                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden transition-all ${p.is_posted ? 'border-l-green-400 border-green-100 opacity-60' : 'border-gray-100'}`}
+              {todayPosts.map((p, i) => (
+                <motion.div key={p.id}
+                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: i * 0.06, ease: EASE }}
+                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden card-hover ${p.is_posted ? 'border-l-green-400 border-green-100 opacity-60' : 'border-gray-100'}`}
                   style={!p.is_posted ? { borderLeftColor: PC[p.platform] } : undefined}>
                   <div className="p-4 sm:p-6">
                     <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Plat p={p.platform} />
-                        {p.format && <span className="text-xs font-semibold text-gray-400">{p.format}</span>}
+                        {p.format && <span className="inline-flex items-center text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">{p.format}</span>}
                         {p.note?.trim() && <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -620,7 +673,7 @@ export default function Home() {
                     </div>
                     <NoteArea note={p.note} onSave={note => saveNote(p.id, note)} />
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 
@@ -629,16 +682,19 @@ export default function Home() {
               <div className="mt-8">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Coming up</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                  {upcomingPosts.map(u => (
-                    <button key={u.id}
+                  {upcomingPosts.map((u, i) => (
+                    <motion.button key={u.id}
+                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, delay: 0.1 + i * 0.05, ease: EASE }}
+                      whileHover={{ y: -2, boxShadow: '0 6px 20px rgba(0,0,0,0.08)' }}
                       onClick={() => { setSelDate(u.date); setViewMonth({ year: parseInt(u.date.slice(0,4)), month: parseInt(u.date.slice(5,7))-1 }); document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' }) }}
-                      className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 text-left hover:border-[#FD5C1E] transition-all group">
+                      className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 text-left hover:border-[#FD5C1E] transition-colors group">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-black text-gray-400">{formatDisplayDate(u.date).slice(0,-6)}</span>
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PC[u.platform] }} />
                       </div>
                       <p className="text-xs font-bold text-[#0a0a0a] leading-snug group-hover:text-[#FD5C1E] transition-colors line-clamp-2">{u.hook}</p>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -745,7 +801,7 @@ export default function Home() {
                 <div className="p-8 text-center">
                   <p className="text-gray-400 text-sm mb-4">No posts scheduled for {formatDisplayDate(selDate)}.</p>
                   <button onClick={() => setAddingPost(blankPost(selDate))}
-                    className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all">
+                    className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] btn-brand">
                     + Add Post for This Day
                   </button>
                 </div>
@@ -789,7 +845,7 @@ export default function Home() {
               <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a]">{totalPosts} captions. All editable.</h2>
             </div>
             <button onClick={() => setAddingPost(blankPost())}
-              className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all whitespace-nowrap">
+              className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] btn-brand whitespace-nowrap">
               + Add Post
             </button>
           </div>
@@ -823,15 +879,19 @@ export default function Home() {
           )}
 
           <div className="grid md:grid-cols-2 gap-5">
-            {filteredLib.map(cap => (
-              <div key={cap.id} className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col transition-all ${cap.is_posted ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100 hover:border-gray-200'}`}
+            {filteredLib.map((cap, i) => (
+              <motion.div key={cap.id}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.45, delay: Math.min(i, 5) * 0.06, ease: EASE }}
+                className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col card-hover ${cap.is_posted ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100'}`}
                 style={!cap.is_posted ? { borderLeftColor: PC[cap.platform] } : undefined}>
                 <div className="p-4 sm:p-5 flex flex-col flex-1">
                   <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Plat p={cap.platform} />
-                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{formatDisplayDate(cap.date)}</span>
-                      {cap.format && <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{cap.format}</span>}
+                      <span className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">{formatDisplayDate(cap.date)}</span>
+                      {cap.format && <span className="text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-100 px-2.5 py-0.5 rounded-full">{cap.format}</span>}
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button onClick={() => setEditingPost(cap)} className="text-[10px] font-bold text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
@@ -845,7 +905,7 @@ export default function Home() {
                   <div className="mt-3"><CopyFull text={cap.caption} /></div>
                   <NoteArea note={cap.note} onSave={note => saveNote(cap.id, note)} />
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -857,10 +917,14 @@ export default function Home() {
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Hashtag Sets</p>
           <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a] mb-8 sm:mb-10">Six packs. Copy and go.</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {HASHTAGS.map(set => {
+            {HASHTAGS.map((set, i) => {
               const raw = set.tags.includes(',') ? set.tags.split(', ') : set.tags.split(' ')
               return (
-                <div key={set.name} className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col">
+                <motion.div key={set.name}
+                  initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-40px' }}
+                  transition={{ duration: 0.4, delay: i * 0.07, ease: EASE }}
+                  className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col card-hover">
                   <div className="p-5 flex-1">
                     <h3 className="font-black text-[#0a0a0a] mb-1">{set.name}</h3>
                     <p className="text-xs text-gray-400 mb-4">{set.desc}</p>
@@ -872,7 +936,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="px-5 pb-5"><CopyAll text={set.tags} /></div>
-                </div>
+                </motion.div>
               )
             })}
           </div>
