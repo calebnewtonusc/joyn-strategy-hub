@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -35,10 +36,16 @@ export default function Nav() {
       }}
     >
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
-        <Link href="/" className="flex items-center gap-2 shrink-0 select-none">
-          <span className="w-6 h-6 rounded bg-[#FD5C1E] flex items-center justify-center text-white font-black text-xs"
-            style={{ boxShadow: '0 2px 8px rgba(253,92,30,0.3)' }}>J</span>
-          <span className="font-black text-sm tracking-tight text-[#0a0a0a]">JOYN</span>
+        <Link href="/" className="flex items-center gap-3 shrink-0 select-none">
+          <Image
+            src="/joyn-logo.png"
+            alt="Joyn"
+            width={0}
+            height={28}
+            style={{ width: 'auto', height: '28px' }}
+            className="object-contain"
+            priority
+          />
           <span className="hidden sm:inline text-gray-300 text-sm">|</span>
           <span className="hidden sm:inline text-gray-400 text-xs font-medium">2026 Social Playbook</span>
         </Link>
