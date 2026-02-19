@@ -189,8 +189,8 @@ export default function CalendarPage() {
                 {day.theme}
               </div>
               <div className="flex gap-0.5 flex-wrap">
-                {day.posts.map((p, i) => (
-                  <div key={i} className={`w-2 h-2 rounded-full ${platformDot[p.platform]}`}></div>
+                {day.posts.map((p) => (
+                  <div key={p.platform + p.hook} className={`w-2 h-2 rounded-full ${platformDot[p.platform]}`}></div>
                 ))}
               </div>
             </button>
@@ -208,8 +208,8 @@ export default function CalendarPage() {
               <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white text-xl">✕</button>
             </div>
             <div className="p-6 space-y-4">
-              {selected.posts.map((post, i) => (
-                <div key={i} className="flex gap-4 p-4 rounded-xl bg-gray-50">
+              {selected.posts.map((post) => (
+                <div key={post.platform + post.hook} className="flex gap-4 p-4 rounded-xl bg-gray-50">
                   <div
                     className="w-1 rounded-full shrink-0"
                     style={{ backgroundColor: platformColor[post.platform] }}

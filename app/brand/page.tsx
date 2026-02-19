@@ -1,3 +1,10 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Brand Kit — Joyn 2026 Social Playbook',
+  description: 'Joyn brand guidelines: colors, typography, voice, and taglines.',
+}
+
 export default function BrandPage() {
   const colors = [
     { name: 'Joyn Orange', hex: '#FD5C1E', use: 'CTAs, hero, energy' },
@@ -94,8 +101,8 @@ export default function BrandPage() {
           <h2 className="text-2xl font-black text-[#0D0D0D] mb-2">Voice &amp; Tone</h2>
           <p className="text-gray-400 mb-6 text-sm">Joyn is <strong className="text-[#0D0D0D]">confident, celebratory, inclusive, witty, and science-backed.</strong></p>
           <div className="space-y-3">
-            {dodonts.map((d, i) => (
-              <div key={i} className="grid grid-cols-2 gap-3">
+            {dodonts.map((d) => (
+              <div key={d.do} className="grid grid-cols-2 gap-3">
                 <div className="bg-green-50 border border-green-100 rounded-xl p-4">
                   <div className="text-xs font-bold text-green-600 uppercase tracking-wide mb-2">DO</div>
                   <p className="text-sm font-semibold text-[#0D0D0D]">&ldquo;{d.do}&rdquo;</p>
@@ -114,7 +121,7 @@ export default function BrandPage() {
           <h2 className="text-2xl font-black text-[#0D0D0D] mb-6">Tagline Bank</h2>
           <div className="space-y-2">
             {taglines.map((t, i) => (
-              <div key={i} className="flex items-center gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4 group hover:border-[#FD5C1E] transition-colors">
+              <div key={t} className="flex items-center gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4 group hover:border-[#FD5C1E] transition-colors">
                 <span className="text-2xl font-black text-gray-100 w-8 shrink-0">{i + 1}</span>
                 <p className="text-lg font-bold text-[#0D0D0D] flex-1">{t}</p>
                 {i === 0 && <span className="text-xs bg-[#FD5C1E] text-white px-2 py-0.5 rounded-full font-bold">PRIMARY</span>}

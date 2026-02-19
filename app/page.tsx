@@ -1036,8 +1036,8 @@ export default function Home() {
                     <h3 className="font-black text-[#0a0a0a] mb-1">{set.name}</h3>
                     <p className="text-xs text-gray-400 mb-4">{set.desc}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {raw.slice(0, 8).map((t, i) => (
-                        <span key={i} className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full font-mono">{t.trim()}</span>
+                      {raw.slice(0, 8).map((t) => (
+                        <span key={t.trim()} className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full font-mono">{t.trim()}</span>
                       ))}
                       {raw.length > 8 && <span className="text-xs text-gray-400 self-center">+{raw.length - 8} more</span>}
                     </div>
@@ -1106,7 +1106,7 @@ export default function Home() {
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Colors — click to copy hex</h3>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {COLORS.map(c => (
-                  <div key={c.hex} className="group cursor-pointer" onClick={() => navigator.clipboard.writeText(c.hex)}>
+                  <button key={c.hex} className="group text-left" onClick={() => navigator.clipboard.writeText(c.hex)}>
                     <div className="h-16 rounded-xl mb-2 relative overflow-hidden" style={{ backgroundColor: c.hex }}>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
                         <span className="text-white text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">Copy</span>
@@ -1114,7 +1114,7 @@ export default function Home() {
                     </div>
                     <div className="text-xs font-mono text-gray-500">{c.hex}</div>
                     <div className="text-[11px] text-gray-400 leading-tight">{c.name}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-2 mb-10">
@@ -1146,8 +1146,8 @@ export default function Home() {
                   ['Red wine. Not red face.', 'Please buy our supplement for flush.'],
                   ['You deserve to show up fully.', 'Fix your embarrassing flush reaction.'],
                   ['Formulated for ALDH2 enzyme activity.', 'It just works, trust us.'],
-                ].map(([d, dn], i) => (
-                  <div key={i} className="grid grid-cols-2 gap-1.5">
+                ].map(([d, dn]) => (
+                  <div key={d} className="grid grid-cols-2 gap-1.5">
                     <div className="bg-green-50 rounded-xl p-3.5">
                       <div className="text-[10px] font-black text-green-600 mb-1.5">DO</div>
                       <p className="text-xs font-semibold text-[#0a0a0a] leading-snug">&ldquo;{d}&rdquo;</p>
@@ -1170,7 +1170,7 @@ export default function Home() {
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Tagline Bank</h3>
               <div className="space-y-0">
                 {TAGLINES.map((t, i) => (
-                  <div key={i} className="py-4 border-b border-gray-100 last:border-0">
+                  <div key={t.line} className="py-4 border-b border-gray-100 last:border-0">
                     <div className="flex items-start justify-between gap-3 mb-1">
                       <div className="flex items-start gap-2 flex-1">
                         <span className="text-xs font-black text-gray-200 mt-0.5 shrink-0">{i + 1}</span>
