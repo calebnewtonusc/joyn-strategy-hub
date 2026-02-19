@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
 
 // ── constants ─────────────────────────────────────────────────────────────────
-const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+const DAY_NAMES   = ['S','M','T','W','T','F','S']
+const DAY_FULL    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const PC: Record<string, string> = { TikTok: '#FD5C1E', Instagram: '#E1306C', Pinterest: '#E60023' }
 
@@ -18,8 +20,11 @@ type Post     = {
   shoot: string
   caption: string
   warn?: string
-  promoCode?: string
+  promo_code?: string
+  is_posted: boolean
+  note: string
 }
+type DbRow = Post & { created_at?: string; updated_at?: string }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function pad(n: number) { return String(n).padStart(2, '0') }
@@ -35,588 +40,45 @@ function formatDisplayDate(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return `${MONTH_NAMES[m - 1]} ${d}, ${y}`
 }
+function dbToPost(row: DbRow): Post {
+  return {
+    id: row.id, date: row.date, platform: row.platform as Platform,
+    format: row.format, hook: row.hook, shoot: row.shoot, caption: row.caption,
+    warn: row.warn ?? undefined, promo_code: row.promo_code ?? undefined,
+    is_posted: row.is_posted ?? false, note: row.note ?? '',
+  }
+}
 
-// ── default posts ─────────────────────────────────────────────────────────────
+// ── seed data ─────────────────────────────────────────────────────────────────
 const SEED: Post[] = [
-  {
-    id:'1', date:'2026-02-01', platform:'Instagram', format:'Announcement Post',
-    hook: "We're live. 600 million people have been waiting for this.",
-    shoot: 'Founder photo or product flat lay on warm Joyn orange surface. This is your launch post — keep it personal and real, not overly produced.',
-    caption: `We're live. 🧡
-
-600 million people have been waiting for this.
-
-Joyn is the first supplement formulated specifically for ALDH2 deficiency — the genetic reason 1 in 3 East Asians (and millions more) turn red when they drink.
-
-Woman-founded. USA-made. Third-party tested.
-
-If you've ever left a party early, skipped a toast, or felt embarrassed at a happy hour — this is for you.
-
-Drop a 🧡 if you've been waiting for something like this.
-
-#Joyn #ConfidenceInACapsule #ALDH2 #AlcoholFlush #WomanFounded #Launch #NewBrand`,
-  },
-  {
-    id:'2', date:'2026-02-02', platform:'TikTok', format:'Educational Hook',
-    hook: 'Why your face turns red when you drink — the genetic truth nobody told you',
-    shoot: 'Green screen with ALDH2 enzyme diagram. Keep under 60s. This is your hero education post — high save + share rate. It blows up.',
-    caption: `Why your face turns red when you drink — the genetic truth nobody told you 🧬
-
-It's called ALDH2 deficiency. 1 in 3 East Asians carry the gene. 600 million people worldwide.
-
-Here's what happens:
-→ You drink alcohol
-→ Your body converts it to acetaldehyde (toxic)
-→ ALDH2 deficiency = your body can't break it down fast enough
-→ Acetaldehyde builds up → redness, racing heart, nausea
-
-The "fix" people use? Pepcid AC. An antacid. Off-label. Damages your stomach.
-
-We built Joyn — the first supplement designed specifically for ALDH2 deficiency.
-
-Drop "flush" in the comments and I'll DM you the link 👇
-
-#ALDH2 #AlcoholFlush #AsianGlow #HealthTok #SupplementTok #GeneticHealth #Joyn`,
-  },
-  {
-    id:'3', date:'2026-02-03', platform:'Instagram', format:'Carousel (6 slides)',
-    hook: 'Save this. Share it with someone who needs it. 📌',
-    shoot: 'Slide 1: bold hook on Joyn orange bg. Slides 2–5: one ALDH2 fact each on clean white. Slide 6: CTA + discount code. No fancy design needed — clear > pretty.',
-    caption: `Save this. Share it with someone who needs it. 📌
-
-ALDH2 deficiency affects 600 million people — yet most people have never heard of it.
-
-1 in 3 East Asians carry the gene. Millions more across all backgrounds.
-
-For years, the "solution" was Pepcid AC — an antacid, off-label, that damages your stomach.
-
-Joyn is the first supplement formulated specifically for ALDH2 deficiency.
-Not a mask. A real answer for real biology.
-
-Woman-founded. USA-made. Third-party tested.
-
-→ Link in bio 🧡
-
-#ALDH2 #AlcoholFlush #AsianGlow #Joyn #HealthEducation #WomanFounded #ConfidenceInACapsule #AAPI`,
-  },
-  {
-    id:'4', date:'2026-02-04', platform:'TikTok', format:'Relatable List',
-    hook: 'Things people with Asian flush relate to (a thread) 😭',
-    shoot: 'Text list on screen, trending audio, react to each one. High comment + share format. Ask viewers to drop their most relatable one.',
-    caption: `Things people with Asian flush relate to (a thread) 😭
-
-✗ "One drink and my face looks like a tomato"
-✗ Googling "alcohol flush remedy" for the 100th time
-✗ Ordering club soda at work happy hours
-✗ Leaving parties before the toast
-✗ Taking Pepcid and worrying about your stomach
-✗ Someone asking "are you OK?" when you're just having fun
-✗ Skipping champagne at your own celebration
-
-None of us signed up for this.
-But now there's actually a real answer.
-
-Joyn — the first supplement formulated for ALDH2.
-
-Comment your most relatable one 👇 I read every comment
-
-#AsianGlow #ALDH2 #AlcoholFlush #AsianAmericanProblems #Joyn #FlushReaction`,
-  },
-  {
-    id:'5', date:'2026-02-05', platform:'TikTok', format:'First-Person Story',
-    hook: "I tried Joyn at my work happy hour and I'm still processing 😭",
-    shoot: 'Selfie cam. Casual, conversational — sitting in a car or at home. No script. Could also be voiceover over office/bar B-roll.',
-    caption: `I tried Joyn at my work happy hour and I'm still processing 😭
-
-I've worked at this company for 3 years. I've never had more than one drink at work events.
-
-Not because I don't want to. Because two drinks and my face looks like a fire alarm.
-
-Tuesday: took 2 Joyn capsules 30 min before. Had two glasses of wine. Stayed for 2+ hours.
-
-My manager said "you seem more relaxed lately."
-
-I didn't tell him why. I didn't have to.
-
-#Joyn #WorkHappyHour #ALDH2 #AlcoholFlush #HealthTok #ConfidenceInACapsule`,
-  },
-  {
-    id:'6', date:'2026-02-06', platform:'TikTok', format:'Short Hook',
-    promoCode: 'JOYN15',
-    hook: 'Red wine. Not red face. 🍷',
-    shoot: 'Short, punchy — under 20 seconds. B-roll of someone enjoying wine at dinner, looking relaxed. Text overlay only. No voiceover needed.',
-    caption: `Red wine. Not red face. 🍷
-
-The thing about ALDH2 deficiency is that it's not about how much you drink.
-
-One glass of rosé and your face betrays you — because your body processes acetaldehyde slower than it should.
-
-Joyn supports ALDH2 enzyme activity so your body can actually do its job.
-
-Two capsules. Thirty minutes. That's it.
-
-Use code JOYN15 → link in bio 🧡
-
-#Joyn #RedWine #ALDH2 #AlcoholFlush #ConfidenceInACapsule #FlushFree`,
-  },
-  {
-    id:'7', date:'2026-02-07', platform:'Instagram', format:'Q&A Prompt',
-    hook: 'Drop your questions about alcohol flush and Joyn below 👇',
-    shoot: 'Simple post — Joyn orange background or casual founder photo. Goal is engagement, not aesthetics. Also post a Story asking the same question.',
-    caption: `Drop your questions about alcohol flush and Joyn below 👇
-
-We're doing a full Q&A this weekend — no question is too basic, no question is too scientific.
-
-We want to know:
-→ When did you first notice the flush?
-→ What have you tried before?
-→ What do you want to know about Joyn?
-
-Everything gets answered. Every story gets heard.
-
-This community is what we built Joyn for. 🧡
-
-#Joyn #QandA #ALDH2 #AlcoholFlush #Community #AskUsAnything`,
-  },
-  {
-    id:'8', date:'2026-02-08', platform:'TikTok', format:'Tier List',
-    hook: 'Rating every alcohol flush "cure" from worst to best (HONEST)',
-    shoot: 'On-screen tier list with comedic reaction to each. Fast cuts. Highly shareable — built for saves. Be honest, including about Joyn.',
-    caption: `Rating every alcohol flush "cure" from worst to best — be honest, you've tried most of these 😅
-
-❌ 5/10 — Cold water on face. Reduces redness for 2 minutes.
-❌ 4/10 — Eating a huge meal first. Slows absorption, doesn't fix flush.
-❌ 3/10 — Antihistamines. Makes you drowsy, doesn't help acetaldehyde.
-⚠️ 2/10 — Pepcid off-label. Masks the symptom, real stomach risks.
-❌ 1/10 — Just stop drinking. OK sure, thanks.
-✅ 9/10 — Joyn. Actually formulated for ALDH2 enzyme activity. First of its kind.
-
-Minus 1 because nothing is perfect and I'm honest.
-
-Link in bio.
-
-#AlcoholFlush #AsianGlow #ALDH2 #Joyn #HealthTok #FlushRemedies`,
-  },
-  {
-    id:'9', date:'2026-02-09', platform:'TikTok', format:'Before / After',
-    hook: 'Before Joyn vs. After Joyn: The honest version 🔄',
-    shoot: 'Split screen or alternating text cards. Keep it real and grounded — no over-the-top claims. The truth is compelling enough.',
-    caption: `Before Joyn vs. After Joyn: The honest version 🔄
-
-Before:
-→ One drink = watching the clock
-→ Happy hours = sparkling water and excuses
-→ Weddings = the person who left at 9pm
-→ First dates = counting sips
-→ Work events = strategic avoidance
-
-After:
-→ The full glass
-→ The second toast
-→ The 1am table at the reception
-→ Actually tasting the wine
-→ Being present for it
-
-600 million people have ALDH2 deficiency. Most of them don't know it yet.
-
-Drop "flush" in the comments and I'll DM you the link 👇
-
-#Joyn #BeforeAndAfter #ALDH2 #AlcoholFlush #HealthTok #ConfidenceInACapsule`,
-  },
-  {
-    id:'10', date:'2026-02-10', platform:'TikTok', format:'Educational Warning',
-    hook: "Pepcid for alcohol flush? Your doctor probably doesn't know this 😳",
-    shoot: 'Calm, credible delivery. Show Reddit thread screenshots as B-roll. This one gets shared wildly — doctors will share it too.',
-    caption: `Pepcid for alcohol flush? Your doctor probably doesn't know this 😳
-
-Millions of people use H2 blockers (Pepcid, Zantac) off-label to reduce flush.
-
-Here's the problem:
-→ They block histamine — masking the red face symptom
-→ They DON'T help your body break down acetaldehyde
-→ Long-term: stomach ulcers, reduced acid, dependency
-→ Never tested or approved for this purpose
-
-And yet it's the #1 advice on Reddit and TikTok.
-
-Joyn works differently. Supports ALDH2 enzyme activity — so your body actually processes the acetaldehyde instead of just hiding it.
-
-If this helped, share it. Link in bio 🙏
-
-#AlcoholFlush #Pepcid #ALDH2 #AsianGlow #HealthTok #DrinkingTips #Joyn`,
-  },
-  {
-    id:'11', date:'2026-02-11', platform:'TikTok', format:'Lifestyle Story',
-    hook: 'Open bar at a wedding with zero anxiety 💒',
-    shoot: 'Cinematic clips from a wedding or a night out — toasts, dancing, being present. Voiceover or text overlay. Pure aspiration.',
-    caption: `Open bar at a wedding with zero anxiety 💒
-
-You know the wedding mental math:
-→ Getting seated next to people you just met
-→ Champagne toast coming
-→ Choosing between looking rude (not drinking) or turning red (drinking)
-
-This weekend: Joyn before the ceremony. Open bar, 4+ hours, multiple toasts, dancing.
-
-Zero flush. Zero hiding. Zero mental math.
-
-I was just there. Fully.
-
-#Joyn #WeddingSeason #OpenBar #ALDH2 #AlcoholFlush #ConfidenceInACapsule`,
-  },
-  {
-    id:'12', date:'2026-02-12', platform:'Instagram', format:'Quote Card',
-    warn: 'Template post — replace every [placeholder] with a real verified customer before posting. Get explicit written permission. Never post fabricated testimonials.',
-    promoCode: '[ADD LAUNCH CODE]',
-    hook: '"[Customer quote — their own words, their own moment.]" — [Name, Age]',
-    shoot: 'Clean quote card on Joyn orange background. Or a warm candid celebration photo with the quote overlaid. Let the real quote do all the work.',
-    caption: `"[Customer quote — their own words, their own moment.]" — [Name, Age] 🥂
-
-[1–2 sentences: their background. What they struggled with. How long they lived with it.]
-
-[Their Joyn moment — one specific real detail. Real event. Real time. Real feeling.]
-
-That's why we built this.
-
-Real review. Real customer.
-
-→ Link in bio. Use code [ADD LAUNCH CODE] for 15% off.
-
-#Joyn #CustomerStory #ALDH2 #AlcoholFlush #ConfidenceInACapsule #Testimonial`,
-  },
-  {
-    id:'13', date:'2026-02-13', platform:'Instagram', format:'Cultural Moment',
-    promoCode: '[ADD LNY CODE]',
-    hook: 'Lunar New Year without the flush — first time ever 🧧',
-    shoot: 'Warm LNY aesthetic — red, gold, family celebration. Could be UGC. Post LNY eve for max emotional reach.',
-    caption: `Lunar New Year without the flush — first time in my life 🧧
-
-Eight courses. Multiple toasts with the elders. Baijiu and beer and champagne.
-
-Normally I'd be red by soup.
-Normally I'd switch to tea early.
-
-This year: Joyn. 2 capsules before dinner.
-
-I stayed present the whole meal. Made every toast. My grandma asked why I seemed so happy.
-
-That's the whole point. 🥂
-
-→ Link in bio. Use code [ADD LNY CODE] for 25% off.
-
-#LunarNewYear #ChineseNewYear #AAPI #ALDH2 #AsianGlow #Joyn #CelebrateFreely`,
-  },
-  {
-    id:'14', date:'2026-02-14', platform:'Instagram', format:"Valentine's Day Post",
-    promoCode: '[ADD CODE]',
-    hook: "Valentine's Day with confidence you've never had before 💛",
-    shoot: "Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work.",
-    caption: `Valentine's Day with confidence you've never had before 💛
-
-To everyone who's ever ordered sparkling water on a date because one drink would end the night —
-
-To everyone who's ever timed their flush to avoid the first-kiss moment —
-
-To everyone who's ever wished they could just... be present —
-
-This one's for you.
-
-Two capsules. Thirty minutes. Show up fully.
-
-Happy Valentine's Day. You deserve it. 🍷
-
-Use code [ADD CODE] → link in bio 🧡
-
-#Joyn #ValentinesDay #ALDH2 #AlcoholFlush #ConfidenceInACapsule #DateNight`,
-  },
-  {
-    id:'15', date:'2026-02-15', platform:'TikTok', format:'Expert Review',
-    warn: "Template post — replace with a real medical advisor's actual words. Get written sign-off before publishing. Never fabricate expert endorsements — this is an FTC violation.",
-    hook: "Asked a doctor to review Joyn — here's what she said 🩺",
-    shoot: 'Credible, calm delivery to camera. No lab coat required. Could be voiceover with ingredient text on screen. Do NOT be salesy — let the science speak.',
-    caption: `Asked a doctor to review Joyn — here's what she said 🩺
-
-We sent our full formula to [Dr. Name, Credentials — e.g. "Dr. Jane Park, MD, metabolic health"].
-
-Her response:
-
-"[Direct quote — her own words. Get written approval before publishing.]"
-
-We're not a drug. We're not medical advice. But we are built on real science.
-
-Full formula breakdown → link in bio 🔬
-
-#Joyn #DoctorReview #ALDH2 #HealthTok #SupplementTok #Science #AlcoholFlush`,
-  },
-  {
-    id:'16', date:'2026-02-16', platform:'Instagram', format:'Carousel (6 slides)',
-    hook: 'ALDH2 deficiency — the complete breakdown 🧬',
-    shoot: 'Clean educational carousel. Slide 1: bold hook on Joyn orange. Slides 2-5: one fact each. Slide 6: Joyn CTA. White + orange palette. Save rate will be high.',
-    caption: `ALDH2 deficiency — the complete breakdown 🧬
-
-Save this. Share it with someone who's been told "just take Pepcid."
-
-Here's everything your doctor probably never told you:
-
-→ What ALDH2 is and why it matters
-→ Why 1 in 3 East Asians carry the gene
-→ What actually happens in your body when you flush
-→ Why Pepcid is the wrong answer
-→ What Joyn does differently
-
-600 million people deserve to understand their own biology.
-
-→ Link in bio 🧡
-
-#ALDH2 #AlcoholFlush #AsianGlow #HealthEducation #Joyn #ConfidenceInACapsule #SaveThis`,
-  },
-  {
-    id:'17', date:'2026-02-17', platform:'TikTok', format:'Founder Story',
-    hook: 'I spent years building Joyn because I was tired of hiding',
-    shoot: 'Founder to camera. No script, no teleprompter. Just talk. This is the most powerful content you can make — authentic founder story converts.',
-    caption: `I spent years building Joyn because I was tired of hiding 🍷
-
-Every networking event: sparkling water, hoping nobody noticed.
-Every wedding toast: a sip and then back to water.
-Every first date: counting drinks, watching my face.
-
-Then I learned it was genetic. ALDH2 deficiency. Not just me — 600 million people.
-
-I became obsessed with a real solution. Not Pepcid. Not gimmicks.
-
-Years of development. USA-made. Third-party tested. Woman-founded.
-
-This is Joyn. For every person who's ever hidden. 💛
-
-#Joyn #WomanFounded #ALDH2 #AlcoholFlush #Founder #ConfidenceInACapsule`,
-  },
-  {
-    id:'18', date:'2026-02-18', platform:'Instagram', format:'Story Poll',
-    hook: 'What celebration are you most excited for this year?',
-    shoot: 'Post a Story with a poll sticker. Joyn orange background. Poll options: "A wedding" / "Graduation" / "Date night" / "Just a Friday." Also post this as a feed caption for engagement.',
-    caption: `What celebration are you most excited for this year? 🎉
-
-Drop it in the comments or vote in our story poll 👆
-
-Whether it's a wedding, a birthday, a work win, or just a Friday night that finally feels like something —
-
-You deserve to be fully present for all of it.
-
-Joyn is here for every single one. 🧡
-
-#Joyn #Celebrate #ALDH2 #ConfidenceInACapsule #CelebrateFreely`,
-  },
-  {
-    id:'19', date:'2026-02-19', platform:'TikTok', format:'Selfie Diary',
-    hook: "7 days with Joyn — I'm going to be honest",
-    shoot: 'Selfie-cam across 7 real days. Natural lighting. No script. This format converts — authentic > polished. Film Day 1 on Feb 12, post Feb 19.',
-    caption: `7 days with Joyn — I'm going to be honest 📔
-
-Day 1: Took 2 capsules 30 min before drinks. Less flushing than normal. Cautiously optimistic.
-
-Day 2: Work happy hour. Stayed the whole time. Ordered a second drink. My coworker asked why I seemed more relaxed.
-
-Day 4: Date night. Ordered wine without the usual anxiety.
-
-Day 5: Checked my face mid-meal. Normal color. Actually stayed at dinner.
-
-Day 7: I cried a little honestly. 15 years of hiding. 7 days.
-
-Not an ad. Just someone who needed this to exist.
-
-#Joyn #AlcoholFlush #ALDH2 #HealthTok #HonestReview #7DayChallenge #ConfidenceInACapsule`,
-  },
-  {
-    id:'20', date:'2026-02-20', platform:'Instagram', format:'Founder Feed Post',
-    hook: "We didn't build Joyn to get rich. We built it because we were tired of hiding.",
-    shoot: 'Personal editorial photo of Brynn or the team. Warm lighting. No product in frame. This is about the human story, not the product.',
-    caption: `We didn't build Joyn to get rich. We built it because we were tired of hiding. 🍷
-
-Tired of showing up to celebrations and quietly managing our faces instead of being present.
-
-Tired of the Reddit threads saying "just take Pepcid."
-
-Tired of a market full of "hangover cures" that weren't built for us at all.
-
-600 million people deserve a real answer. So we built one.
-
-Woman-founded. USA-made. Formulated for your biology, not against it.
-
-Joyn. Confidence in a capsule. 🧡
-
-#Joyn #WomanFounded #ALDH2 #AlcoholFlush #ConfidenceInACapsule #USAMade`,
-  },
-  {
-    id:'21', date:'2026-02-21', platform:'TikTok', format:'Lifestyle Video',
-    promoCode: '[ADD CODE]',
-    hook: 'Spring break. No flush edition. 🌴',
-    shoot: 'Fun, energetic spring break energy. Trending audio. Light and summery edit. Fast cuts. This is an ad-adjacent organic post.',
-    caption: `Spring break is almost here and for the first time you don't have to choose between having fun and hiding your face 🌴
-
-No more watching your phone camera to check how red you are.
-No more quietly switching to water after one drink.
-No more leaving early.
-
-Spring 2026: you're going. You're staying. You're present.
-
-Two capsules. Thirty minutes. That's it.
-
-Use code [ADD CODE] for 15% off → link in bio 🧡
-
-#SpringBreak #AlcoholFlush #ALDH2 #AsianGlow #Joyn #CelebrateFully #ConfidenceInACapsule`,
-  },
-  {
-    id:'22', date:'2026-02-22', platform:'Instagram', format:'Community Spotlight',
-    warn: 'Template post — collect real DM stories before building this. Post an Instagram Story asking followers to share their Joyn moment. Get explicit written permission from each person. Then replace every [placeholder] below.',
-    hook: "You sent us your stories this month. We can't stop reading them. 🧡",
-    shoot: 'Collage of real DM screenshots (with permission) or quote cards on Joyn cream background. Warm, grateful energy. Real names or anonymous — always ask first.',
-    caption: `You sent us your stories this month. We can't stop reading them. 🧡
-
-"[Customer quote 1]" — [Name, Age or anonymous]
-
-"[Customer quote 2]" — [Name, Age or anonymous]
-
-"[Customer quote 3]" — [Name, Age or anonymous]
-
-"[Customer quote 4]" — [Name or anonymous]
-
-This is why we built Joyn. Not for the product — for these moments.
-
-Keep sending them. We read every single one.
-
-#Joyn #CommunityStories #ALDH2 #AlcoholFlush #ConfidenceInACapsule #CustomerLove`,
-  },
-  {
-    id:'23', date:'2026-02-23', platform:'TikTok', format:'Ingredient Breakdown',
-    hook: "Every ingredient in Joyn and exactly why it's there 🔬",
-    shoot: 'Green screen or text overlay with ingredient list. Credible, educational tone. High save rate format. Show the bottle.',
-    caption: `Every ingredient in Joyn and exactly why it's there 🔬
-
-We're not hiding anything. Let's go through it:
-
-→ Dihydromyricetin (DHM): Studied for supporting alcohol metabolism
-→ NAC: Precursor to glutathione, your body's master antioxidant
-→ B-vitamins: Support liver metabolic function
-→ Milk Thistle: Liver support, used in wellness for centuries
-→ Vitamin C: Antioxidant support during oxidative stress
-
-No proprietary blends. No "natural flavors." No hiding behind vague labels.
-
-This is what flush-free actually looks like at the molecular level.
-
-Save this. Full breakdown → link in bio.
-
-#Joyn #Ingredients #ALDH2 #HealthTok #SupplementTok #Transparency #CleanSupplements`,
-  },
-  {
-    id:'24', date:'2026-02-24', platform:'Instagram', format:'Milestone Post',
-    hook: '30 days. Thousands of celebrations. 🥂',
-    shoot: 'Celebratory and warm. Founder photo, product shot, or a collage of customer moments. This is your month-end moment — make it meaningful.',
-    caption: `30 days. Thousands of celebrations. 🥂
-
-When we launched on February 1st, we hoped people would find us.
-We didn't know they'd find us this fast.
-
-The stories in our DMs. The reviews. The people saying they finally went to their office party, finally stayed at the wedding, finally had a glass of wine on a first date without counting their heartbeats.
-
-We built Joyn for the 600 million people with ALDH2 deficiency who've been ignored.
-
-Month 1 is done. We're just getting started.
-
-Thank you. 🧡
-
-#Joyn #OneMonth #ALDH2 #AlcoholFlush #ConfidenceInACapsule #ThankYou #WomanFounded`,
-  },
-  {
-    id:'25', date:'2026-02-25', platform:'TikTok', format:'Skeptic Response',
-    hook: "I read every skeptical comment about Joyn so you don't have to 😅",
-    shoot: 'Fast cuts, text overlay for each objection. Honest and slightly funny. Builds trust by acknowledging doubt head-on.',
-    caption: `I read every skeptical comment about Joyn so you don't have to 😅
-
-"It's just a placebo." — The enzyme science disagrees. Look up DHM and ALDH2.
-
-"Just drink less." — The point is choice. Not abstinence.
-
-"Pepcid works fine." — Long-term: stomach ulcers, acid dependency. Not fine.
-
-"Too expensive." — One bottle = one month. Calculate your current Pepcid habit.
-
-"Nothing works for flush." — That's what we thought too.
-
-The skepticism is valid. We earned it by being honest about the science.
-
-Formula transparency → link in bio 🔬
-
-#Joyn #SkepticsWelcome #ALDH2 #HealthTok #AlcoholFlush #ConfidenceInACapsule`,
-  },
-  {
-    id:'26', date:'2026-02-26', platform:'Instagram', format:'Community CTA',
-    hook: 'Community weekend 🔥 Send us your story.',
-    shoot: 'Simple, energetic post — orange graphic or casual founder video. Goal is to flood the DMs. Maximize engagement above all else.',
-    caption: `Community weekend 🔥
-
-We're handing the mic to you.
-
-This weekend: send us your flush stories, your Joyn moments, your before/afters.
-
-Best ones get featured on our feed. Tag us @joynthefun or DM directly.
-
-Everything's anonymous if you want it to be. We know these stories are personal.
-
-But they matter. Every single one.
-
-Drop your story below 👇
-
-#Joyn #CommunityTakeover #ALDH2 #AlcoholFlush #YourStory #ConfidenceInACapsule`,
-  },
-  {
-    id:'27', date:'2026-02-27', platform:'TikTok', format:'Entertainment',
-    promoCode: '[ADD CODE]',
-    hook: "Rating celebrity flush moments they definitely didn't want us to see 😭",
-    shoot: 'Entertaining — use publicly available footage or general B-roll. Do NOT name specific individuals without legal review first. Frame everything as solidarity, not mockery.',
-    caption: `Rating celebrity flush moments they definitely didn't want us to see 😭
-
-(Solidarity, not mockery — ALDH2 affects everyone regardless of fame or following)
-
-⭐ That awards show toast where someone's face told a whole other story
-⭐ Every red carpet open bar moment caught in 4K... front row... cameras everywhere
-⭐ The group photo at the after-party that lives rent-free in their heads
-
-The difference between them and you: they had stylists, PRs, and makeup artists on standby.
-
-You just have Joyn.
-
-Code [ADD CODE] → link in bio 🧡
-
-#Joyn #AsianGlow #ALDH2 #TikTokFun #AlcoholFlush #ConfidenceInACapsule #AsianAmerican`,
-  },
-  {
-    id:'28', date:'2026-02-28', platform:'Instagram', format:'Month Wrap-up',
-    hook: "Month 1 is done. Here's to the 600M. 🥂",
-    shoot: 'Most important post of the month. Emotional, warm. Founder or team photo. Real, personal, not polished. This is the closer.',
-    caption: `Month 1 is done. Here's to the 600M. 🥂
-
-February 2026.
-
-We launched a supplement nobody asked us to build — because we needed it ourselves.
-
-In 28 days:
-→ Thousands of orders shipped
-→ Hundreds of stories in our DMs
-→ A community we didn't know we were building
-
-For the person who found us at 2am after a bad night at a dinner party —
-For the person who shared us with their college roommate —
-For the person who finally stayed until the last dance —
-
-We built this for you.
-
-March is next. Bring your celebrations.
-
-Joyn. Confidence in a capsule. 🧡
-
-#Joyn #OneMonth #ALDH2 #AlcoholFlush #ConfidenceInACapsule #ThankYou #WomanFounded #USAMade`,
-  },
+  { id:'1',  date:'2026-02-01', platform:'Instagram', format:'Announcement Post',       is_posted:false, note:'', hook:"We're live. 600 million people have been waiting for this.", shoot:'Founder photo or product flat lay on warm Joyn orange surface. This is your launch post — keep it personal and real, not overly produced.', caption:"We're live. 🧡\n\n600 million people have been waiting for this.\n\nJoyn is the first supplement formulated specifically for ALDH2 deficiency — the genetic reason 1 in 3 East Asians (and millions more) turn red when they drink.\n\nWoman-founded. USA-made. Third-party tested.\n\nIf you've ever left a party early, skipped a toast, or felt embarrassed at a happy hour — this is for you.\n\nDrop a 🧡 if you've been waiting for something like this.\n\n#Joyn #ConfidenceInACapsule #ALDH2 #AlcoholFlush #WomanFounded #Launch #NewBrand" },
+  { id:'2',  date:'2026-02-02', platform:'TikTok',    format:'Educational Hook',        is_posted:false, note:'', hook:'Why your face turns red when you drink — the genetic truth nobody told you', shoot:'Green screen with ALDH2 enzyme diagram. Keep under 60s. This is your hero education post — high save + share rate. It blows up.', caption:"Why your face turns red when you drink — the genetic truth nobody told you 🧬\n\nIt's called ALDH2 deficiency. 1 in 3 East Asians carry the gene. 600 million people worldwide.\n\nHere's what happens:\n→ You drink alcohol\n→ Your body converts it to acetaldehyde (toxic)\n→ ALDH2 deficiency = your body can't break it down fast enough\n→ Acetaldehyde builds up → redness, racing heart, nausea\n\nThe \"fix\" people use? Pepcid AC. An antacid. Off-label. Damages your stomach.\n\nWe built Joyn — the first supplement designed specifically for ALDH2 deficiency.\n\nDrop \"flush\" in the comments and I'll DM you the link 👇\n\n#ALDH2 #AlcoholFlush #AsianGlow #HealthTok #SupplementTok #GeneticHealth #Joyn" },
+  { id:'3',  date:'2026-02-03', platform:'Instagram', format:'Carousel (6 slides)',      is_posted:false, note:'', hook:'Save this. Share it with someone who needs it. 📌', shoot:'Slide 1: bold hook on Joyn orange bg. Slides 2–5: one ALDH2 fact each on clean white. Slide 6: CTA + discount code. No fancy design needed — clear > pretty.', caption:"Save this. Share it with someone who needs it. 📌\n\nALDH2 deficiency affects 600 million people — yet most people have never heard of it.\n\n1 in 3 East Asians carry the gene. Millions more across all backgrounds.\n\nFor years, the \"solution\" was Pepcid AC — an antacid, off-label, that damages your stomach.\n\nJoyn is the first supplement formulated specifically for ALDH2 deficiency.\nNot a mask. A real answer for real biology.\n\nWoman-founded. USA-made. Third-party tested.\n\n→ Link in bio 🧡\n\n#ALDH2 #AlcoholFlush #AsianGlow #Joyn #HealthEducation #WomanFounded #ConfidenceInACapsule #AAPI" },
+  { id:'4',  date:'2026-02-04', platform:'TikTok',    format:'Relatable List',           is_posted:false, note:'', hook:'Things people with Asian flush relate to (a thread) 😭', shoot:'Text list on screen, trending audio, react to each one. High comment + share format. Ask viewers to drop their most relatable one.', caption:"Things people with Asian flush relate to (a thread) 😭\n\n✗ \"One drink and my face looks like a tomato\"\n✗ Googling \"alcohol flush remedy\" for the 100th time\n✗ Ordering club soda at work happy hours\n✗ Leaving parties before the toast\n✗ Taking Pepcid and worrying about your stomach\n✗ Someone asking \"are you OK?\" when you're just having fun\n✗ Skipping champagne at your own celebration\n\nNone of us signed up for this.\nBut now there's actually a real answer.\n\nJoyn — the first supplement formulated for ALDH2.\n\nComment your most relatable one 👇 I read every comment\n\n#AsianGlow #ALDH2 #AlcoholFlush #AsianAmericanProblems #Joyn #FlushReaction" },
+  { id:'5',  date:'2026-02-05', platform:'TikTok',    format:'First-Person Story',       is_posted:false, note:'', hook:"I tried Joyn at my work happy hour and I'm still processing 😭", shoot:'Selfie cam. Casual, conversational — sitting in a car or at home. No script. Could also be voiceover over office/bar B-roll.', caption:"I tried Joyn at my work happy hour and I'm still processing 😭\n\nI've worked at this company for 3 years. I've never had more than one drink at work events.\n\nNot because I don't want to. Because two drinks and my face looks like a fire alarm.\n\nTuesday: took 2 Joyn capsules 30 min before. Had two glasses of wine. Stayed for 2+ hours.\n\nMy manager said \"you seem more relaxed lately.\"\n\nI didn't tell him why. I didn't have to.\n\n#Joyn #WorkHappyHour #ALDH2 #AlcoholFlush #HealthTok #ConfidenceInACapsule" },
+  { id:'6',  date:'2026-02-06', platform:'TikTok',    format:'Short Hook',               is_posted:false, note:'', promo_code:'JOYN15', hook:'Red wine. Not red face. 🍷', shoot:'Short, punchy — under 20 seconds. B-roll of someone enjoying wine at dinner, looking relaxed. Text overlay only. No voiceover needed.', caption:"Red wine. Not red face. 🍷\n\nThe thing about ALDH2 deficiency is that it's not about how much you drink.\n\nOne glass of rosé and your face betrays you — because your body processes acetaldehyde slower than it should.\n\nJoyn supports ALDH2 enzyme activity so your body can actually do its job.\n\nTwo capsules. Thirty minutes. That's it.\n\nUse code JOYN15 → link in bio 🧡\n\n#Joyn #RedWine #ALDH2 #AlcoholFlush #ConfidenceInACapsule #FlushFree" },
+  { id:'7',  date:'2026-02-07', platform:'Instagram', format:'Q&A Prompt',               is_posted:false, note:'', hook:'Drop your questions about alcohol flush and Joyn below 👇', shoot:'Simple post — Joyn orange background or casual founder photo. Goal is engagement, not aesthetics. Also post a Story asking the same question.', caption:"Drop your questions about alcohol flush and Joyn below 👇\n\nWe're doing a full Q&A this weekend — no question is too basic, no question is too scientific.\n\nWe want to know:\n→ When did you first notice the flush?\n→ What have you tried before?\n→ What do you want to know about Joyn?\n\nEverything gets answered. Every story gets heard.\n\nThis community is what we built Joyn for. 🧡\n\n#Joyn #QandA #ALDH2 #AlcoholFlush #Community #AskUsAnything" },
+  { id:'8',  date:'2026-02-08', platform:'TikTok',    format:'Tier List',                is_posted:false, note:'', hook:'Rating every alcohol flush "cure" from worst to best (HONEST)', shoot:'On-screen tier list with comedic reaction to each. Fast cuts. Highly shareable — built for saves. Be honest, including about Joyn.', caption:"Rating every alcohol flush \"cure\" from worst to best — be honest, you've tried most of these 😅\n\n❌ 5/10 — Cold water on face. Reduces redness for 2 minutes.\n❌ 4/10 — Eating a huge meal first. Slows absorption, doesn't fix flush.\n❌ 3/10 — Antihistamines. Makes you drowsy, doesn't help acetaldehyde.\n⚠️ 2/10 — Pepcid off-label. Masks the symptom, real stomach risks.\n❌ 1/10 — Just stop drinking. OK sure, thanks.\n✅ 9/10 — Joyn. Actually formulated for ALDH2 enzyme activity. First of its kind.\n\nMinus 1 because nothing is perfect and I'm honest.\n\nLink in bio.\n\n#AlcoholFlush #AsianGlow #ALDH2 #Joyn #HealthTok #FlushRemedies" },
+  { id:'9',  date:'2026-02-09', platform:'TikTok',    format:'Before / After',           is_posted:false, note:'', hook:'Before Joyn vs. After Joyn: The honest version 🔄', shoot:'Split screen or alternating text cards. Keep it real and grounded — no over-the-top claims. The truth is compelling enough.', caption:"Before Joyn vs. After Joyn: The honest version 🔄\n\nBefore:\n→ One drink = watching the clock\n→ Happy hours = sparkling water and excuses\n→ Weddings = the person who left at 9pm\n→ First dates = counting sips\n→ Work events = strategic avoidance\n\nAfter:\n→ The full glass\n→ The second toast\n→ The 1am table at the reception\n→ Actually tasting the wine\n→ Being present for it\n\n600 million people have ALDH2 deficiency. Most of them don't know it yet.\n\nDrop \"flush\" in the comments and I'll DM you the link 👇\n\n#Joyn #BeforeAndAfter #ALDH2 #AlcoholFlush #HealthTok #ConfidenceInACapsule" },
+  { id:'10', date:'2026-02-10', platform:'TikTok',    format:'Educational Warning',      is_posted:false, note:'', hook:"Pepcid for alcohol flush? Your doctor probably doesn't know this 😳", shoot:'Calm, credible delivery. Show Reddit thread screenshots as B-roll. This one gets shared wildly — doctors will share it too.', caption:"Pepcid for alcohol flush? Your doctor probably doesn't know this 😳\n\nMillions of people use H2 blockers (Pepcid, Zantac) off-label to reduce flush.\n\nHere's the problem:\n→ They block histamine — masking the red face symptom\n→ They DON'T help your body break down acetaldehyde\n→ Long-term: stomach ulcers, reduced acid, dependency\n→ Never tested or approved for this purpose\n\nAnd yet it's the #1 advice on Reddit and TikTok.\n\nJoyn works differently. Supports ALDH2 enzyme activity — so your body actually processes the acetaldehyde instead of just hiding it.\n\nIf this helped, share it. Link in bio 🙏\n\n#AlcoholFlush #Pepcid #ALDH2 #AsianGlow #HealthTok #DrinkingTips #Joyn" },
+  { id:'11', date:'2026-02-11', platform:'TikTok',    format:'Lifestyle Story',          is_posted:false, note:'', hook:'Open bar at a wedding with zero anxiety 💒', shoot:'Cinematic clips from a wedding or a night out — toasts, dancing, being present. Voiceover or text overlay. Pure aspiration.', caption:"Open bar at a wedding with zero anxiety 💒\n\nYou know the wedding mental math:\n→ Getting seated next to people you just met\n→ Champagne toast coming\n→ Choosing between looking rude (not drinking) or turning red (drinking)\n\nThis weekend: Joyn before the ceremony. Open bar, 4+ hours, multiple toasts, dancing.\n\nZero flush. Zero hiding. Zero mental math.\n\nI was just there. Fully.\n\n#Joyn #WeddingSeason #OpenBar #ALDH2 #AlcoholFlush #ConfidenceInACapsule" },
+  { id:'12', date:'2026-02-12', platform:'Instagram', format:'Quote Card',               is_posted:false, note:'', promo_code:'[ADD LAUNCH CODE]', warn:'Template post — replace every [placeholder] with a real verified customer before posting. Get explicit written permission. Never post fabricated testimonials.', hook:'"[Customer quote — their own words, their own moment.]" — [Name, Age]', shoot:'Clean quote card on Joyn orange background. Or a warm candid celebration photo with the quote overlaid. Let the real quote do all the work.', caption:"\"[Customer quote — their own words, their own moment.]\" — [Name, Age] 🥂\n\n[1–2 sentences: their background. What they struggled with. How long they lived with it.]\n\n[Their Joyn moment — one specific real detail. Real event. Real time. Real feeling.]\n\nThat's why we built this.\n\nReal review. Real customer.\n\n→ Link in bio. Use code [ADD LAUNCH CODE] for 15% off.\n\n#Joyn #CustomerStory #ALDH2 #AlcoholFlush #ConfidenceInACapsule #Testimonial" },
+  { id:'13', date:'2026-02-13', platform:'Instagram', format:'Cultural Moment',          is_posted:false, note:'', promo_code:'[ADD LNY CODE]', hook:'Lunar New Year without the flush — first time ever 🧧', shoot:'Warm LNY aesthetic — red, gold, family celebration. Could be UGC. Post LNY eve for max emotional reach.', caption:"Lunar New Year without the flush — first time in my life 🧧\n\nEight courses. Multiple toasts with the elders. Baijiu and beer and champagne.\n\nNormally I'd be red by soup.\nNormally I'd switch to tea early.\n\nThis year: Joyn. 2 capsules before dinner.\n\nI stayed present the whole meal. Made every toast. My grandma asked why I seemed so happy.\n\nThat's the whole point. 🥂\n\n→ Link in bio. Use code [ADD LNY CODE] for 25% off.\n\n#LunarNewYear #ChineseNewYear #AAPI #ALDH2 #AsianGlow #Joyn #CelebrateFreely" },
+  { id:'14', date:'2026-02-14', platform:'Instagram', format:"Valentine's Day Post",     is_posted:false, note:'', promo_code:'[ADD CODE]', hook:"Valentine's Day with confidence you've never had before 💛", shoot:"Date night aesthetic — warm restaurant, candlelight, two glasses of wine. Or a bold Joyn orange graphic with the copy. Both work.", caption:"Valentine's Day with confidence you've never had before 💛\n\nTo everyone who's ever ordered sparkling water on a date because one drink would end the night —\n\nTo everyone who's ever timed their flush to avoid the first-kiss moment —\n\nTo everyone who's ever wished they could just... be present —\n\nThis one's for you.\n\nTwo capsules. Thirty minutes. Show up fully.\n\nHappy Valentine's Day. You deserve it. 🍷\n\nUse code [ADD CODE] → link in bio 🧡\n\n#Joyn #ValentinesDay #ALDH2 #AlcoholFlush #ConfidenceInACapsule #DateNight" },
+  { id:'15', date:'2026-02-15', platform:'TikTok',    format:'Expert Review',            is_posted:false, note:'', warn:"Template post — replace with a real medical advisor's actual words. Get written sign-off before publishing. Never fabricate expert endorsements — this is an FTC violation.", hook:"Asked a doctor to review Joyn — here's what she said 🩺", shoot:'Credible, calm delivery to camera. No lab coat required. Could be voiceover with ingredient text on screen. Do NOT be salesy — let the science speak.', caption:"Asked a doctor to review Joyn — here's what she said 🩺\n\nWe sent our full formula to [Dr. Name, Credentials — e.g. \"Dr. Jane Park, MD, metabolic health\"].\n\nHer response:\n\n\"[Direct quote — her own words. Get written approval before publishing.]\"\n\nWe're not a drug. We're not medical advice. But we are built on real science.\n\nFull formula breakdown → link in bio 🔬\n\n#Joyn #DoctorReview #ALDH2 #HealthTok #SupplementTok #Science #AlcoholFlush" },
+  { id:'16', date:'2026-02-16', platform:'Instagram', format:'Carousel (6 slides)',      is_posted:false, note:'', hook:'ALDH2 deficiency — the complete breakdown 🧬', shoot:'Clean educational carousel. Slide 1: bold hook on Joyn orange. Slides 2-5: one fact each. Slide 6: Joyn CTA. White + orange palette. Save rate will be high.', caption:"ALDH2 deficiency — the complete breakdown 🧬\n\nSave this. Share it with someone who's been told \"just take Pepcid.\"\n\nHere's everything your doctor probably never told you:\n\n→ What ALDH2 is and why it matters\n→ Why 1 in 3 East Asians carry the gene\n→ What actually happens in your body when you flush\n→ Why Pepcid is the wrong answer\n→ What Joyn does differently\n\n600 million people deserve to understand their own biology.\n\n→ Link in bio 🧡\n\n#ALDH2 #AlcoholFlush #AsianGlow #HealthEducation #Joyn #ConfidenceInACapsule #SaveThis" },
+  { id:'17', date:'2026-02-17', platform:'TikTok',    format:'Founder Story',            is_posted:false, note:'', hook:'I spent years building Joyn because I was tired of hiding', shoot:'Founder to camera. No script, no teleprompter. Just talk. This is the most powerful content you can make — authentic founder story converts.', caption:"I spent years building Joyn because I was tired of hiding 🍷\n\nEvery networking event: sparkling water, hoping nobody noticed.\nEvery wedding toast: a sip and then back to water.\nEvery first date: counting drinks, watching my face.\n\nThen I learned it was genetic. ALDH2 deficiency. Not just me — 600 million people.\n\nI became obsessed with a real solution. Not Pepcid. Not gimmicks.\n\nYears of development. USA-made. Third-party tested. Woman-founded.\n\nThis is Joyn. For every person who's ever hidden. 💛\n\n#Joyn #WomanFounded #ALDH2 #AlcoholFlush #Founder #ConfidenceInACapsule" },
+  { id:'18', date:'2026-02-18', platform:'Instagram', format:'Story Poll',               is_posted:false, note:'', hook:'What celebration are you most excited for this year?', shoot:'Post a Story with a poll sticker. Joyn orange background. Poll options: "A wedding" / "Graduation" / "Date night" / "Just a Friday." Also post this as a feed caption for engagement.', caption:"What celebration are you most excited for this year? 🎉\n\nDrop it in the comments or vote in our story poll 👆\n\nWhether it's a wedding, a birthday, a work win, or just a Friday night that finally feels like something —\n\nYou deserve to be fully present for all of it.\n\nJoyn is here for every single one. 🧡\n\n#Joyn #Celebrate #ALDH2 #ConfidenceInACapsule #CelebrateFreely" },
+  { id:'19', date:'2026-02-19', platform:'TikTok',    format:'Selfie Diary',             is_posted:false, note:'', hook:"7 days with Joyn — I'm going to be honest", shoot:'Selfie-cam across 7 real days. Natural lighting. No script. This format converts — authentic > polished. Film Day 1 on Feb 12, post Feb 19.', caption:"7 days with Joyn — I'm going to be honest 📔\n\nDay 1: Took 2 capsules 30 min before drinks. Less flushing than normal. Cautiously optimistic.\n\nDay 2: Work happy hour. Stayed the whole time. Ordered a second drink. My coworker asked why I seemed more relaxed.\n\nDay 4: Date night. Ordered wine without the usual anxiety.\n\nDay 5: Checked my face mid-meal. Normal color. Actually stayed at dinner.\n\nDay 7: I cried a little honestly. 15 years of hiding. 7 days.\n\nNot an ad. Just someone who needed this to exist.\n\n#Joyn #AlcoholFlush #ALDH2 #HealthTok #HonestReview #7DayChallenge #ConfidenceInACapsule" },
+  { id:'20', date:'2026-02-20', platform:'Instagram', format:'Founder Feed Post',        is_posted:false, note:'', hook:"We didn't build Joyn to get rich. We built it because we were tired of hiding.", shoot:'Personal editorial photo of Brynn or the team. Warm lighting. No product in frame. This is about the human story, not the product.', caption:"We didn't build Joyn to get rich. We built it because we were tired of hiding. 🍷\n\nTired of showing up to celebrations and quietly managing our faces instead of being present.\n\nTired of the Reddit threads saying \"just take Pepcid.\"\n\nTired of a market full of \"hangover cures\" that weren't built for us at all.\n\n600 million people deserve a real answer. So we built one.\n\nWoman-founded. USA-made. Formulated for your biology, not against it.\n\nJoyn. Confidence in a capsule. 🧡\n\n#Joyn #WomanFounded #ALDH2 #AlcoholFlush #ConfidenceInACapsule #USAMade" },
+  { id:'21', date:'2026-02-21', platform:'TikTok',    format:'Lifestyle Video',          is_posted:false, note:'', promo_code:'[ADD CODE]', hook:'Spring break. No flush edition. 🌴', shoot:'Fun, energetic spring break energy. Trending audio. Light and summery edit. Fast cuts. This is an ad-adjacent organic post.', caption:"Spring break is almost here and for the first time you don't have to choose between having fun and hiding your face 🌴\n\nNo more watching your phone camera to check how red you are.\nNo more quietly switching to water after one drink.\nNo more leaving early.\n\nSpring 2026: you're going. You're staying. You're present.\n\nTwo capsules. Thirty minutes. That's it.\n\nUse code [ADD CODE] for 15% off → link in bio 🧡\n\n#SpringBreak #AlcoholFlush #ALDH2 #AsianGlow #Joyn #CelebrateFully #ConfidenceInACapsule" },
+  { id:'22', date:'2026-02-22', platform:'Instagram', format:'Community Spotlight',      is_posted:false, note:'', warn:'Template post — collect real DM stories before building this. Post an Instagram Story asking followers to share their Joyn moment. Get explicit written permission from each person. Then replace every [placeholder] below.', hook:"You sent us your stories this month. We can't stop reading them. 🧡", shoot:'Collage of real DM screenshots (with permission) or quote cards on Joyn cream background. Warm, grateful energy. Real names or anonymous — always ask first.', caption:"You sent us your stories this month. We can't stop reading them. 🧡\n\n\"[Customer quote 1]\" — [Name, Age or anonymous]\n\n\"[Customer quote 2]\" — [Name, Age or anonymous]\n\n\"[Customer quote 3]\" — [Name, Age or anonymous]\n\n\"[Customer quote 4]\" — [Name or anonymous]\n\nThis is why we built Joyn. Not for the product — for these moments.\n\nKeep sending them. We read every single one.\n\n#Joyn #CommunityStories #ALDH2 #AlcoholFlush #ConfidenceInACapsule #CustomerLove" },
+  { id:'23', date:'2026-02-23', platform:'TikTok',    format:'Ingredient Breakdown',     is_posted:false, note:'', hook:"Every ingredient in Joyn and exactly why it's there 🔬", shoot:'Green screen or text overlay with ingredient list. Credible, educational tone. High save rate format. Show the bottle.', caption:"Every ingredient in Joyn and exactly why it's there 🔬\n\nWe're not hiding anything. Let's go through it:\n\n→ Dihydromyricetin (DHM): Studied for supporting alcohol metabolism\n→ NAC: Precursor to glutathione, your body's master antioxidant\n→ B-vitamins: Support liver metabolic function\n→ Milk Thistle: Liver support, used in wellness for centuries\n→ Vitamin C: Antioxidant support during oxidative stress\n\nNo proprietary blends. No \"natural flavors.\" No hiding behind vague labels.\n\nThis is what flush-free actually looks like at the molecular level.\n\nSave this. Full breakdown → link in bio.\n\n#Joyn #Ingredients #ALDH2 #HealthTok #SupplementTok #Transparency #CleanSupplements" },
+  { id:'24', date:'2026-02-24', platform:'Instagram', format:'Milestone Post',           is_posted:false, note:'', hook:'30 days. Thousands of celebrations. 🥂', shoot:'Celebratory and warm. Founder photo, product shot, or a collage of customer moments. This is your month-end moment — make it meaningful.', caption:"30 days. Thousands of celebrations. 🥂\n\nWhen we launched on February 1st, we hoped people would find us.\nWe didn't know they'd find us this fast.\n\nThe stories in our DMs. The reviews. The people saying they finally went to their office party, finally stayed at the wedding, finally had a glass of wine on a first date without counting their heartbeats.\n\nWe built Joyn for the 600 million people with ALDH2 deficiency who've been ignored.\n\nMonth 1 is done. We're just getting started.\n\nThank you. 🧡\n\n#Joyn #OneMonth #ALDH2 #AlcoholFlush #ConfidenceInACapsule #ThankYou #WomanFounded" },
+  { id:'25', date:'2026-02-25', platform:'TikTok',    format:'Skeptic Response',         is_posted:false, note:'', hook:"I read every skeptical comment about Joyn so you don't have to 😅", shoot:'Fast cuts, text overlay for each objection. Honest and slightly funny. Builds trust by acknowledging doubt head-on.', caption:"I read every skeptical comment about Joyn so you don't have to 😅\n\n\"It's just a placebo.\" — The enzyme science disagrees. Look up DHM and ALDH2.\n\n\"Just drink less.\" — The point is choice. Not abstinence.\n\n\"Pepcid works fine.\" — Long-term: stomach ulcers, acid dependency. Not fine.\n\n\"Too expensive.\" — One bottle = one month. Calculate your current Pepcid habit.\n\n\"Nothing works for flush.\" — That's what we thought too.\n\nThe skepticism is valid. We earned it by being honest about the science.\n\nFormula transparency → link in bio 🔬\n\n#Joyn #SkepticsWelcome #ALDH2 #HealthTok #AlcoholFlush #ConfidenceInACapsule" },
+  { id:'26', date:'2026-02-26', platform:'Instagram', format:'Community CTA',            is_posted:false, note:'', hook:'Community weekend 🔥 Send us your story.', shoot:'Simple, energetic post — orange graphic or casual founder video. Goal is to flood the DMs. Maximize engagement above all else.', caption:"Community weekend 🔥\n\nWe're handing the mic to you.\n\nThis weekend: send us your flush stories, your Joyn moments, your before/afters.\n\nBest ones get featured on our feed. Tag us @joynthefun or DM directly.\n\nEverything's anonymous if you want it to be. We know these stories are personal.\n\nBut they matter. Every single one.\n\nDrop your story below 👇\n\n#Joyn #CommunityTakeover #ALDH2 #AlcoholFlush #YourStory #ConfidenceInACapsule" },
+  { id:'27', date:'2026-02-27', platform:'TikTok',    format:'Entertainment',            is_posted:false, note:'', promo_code:'[ADD CODE]', hook:"Rating celebrity flush moments they definitely didn't want us to see 😭", shoot:'Entertaining — use publicly available footage or general B-roll. Do NOT name specific individuals without legal review first. Frame everything as solidarity, not mockery.', caption:"Rating celebrity flush moments they definitely didn't want us to see 😭\n\n(Solidarity, not mockery — ALDH2 affects everyone regardless of fame or following)\n\n⭐ That awards show toast where someone's face told a whole other story\n⭐ Every red carpet open bar moment caught in 4K... front row... cameras everywhere\n⭐ The group photo at the after-party that lives rent-free in their heads\n\nThe difference between them and you: they had stylists, PRs, and makeup artists on standby.\n\nYou just have Joyn.\n\nCode [ADD CODE] → link in bio 🧡\n\n#Joyn #AsianGlow #ALDH2 #TikTokFun #AlcoholFlush #ConfidenceInACapsule #AsianAmerican" },
+  { id:'28', date:'2026-02-28', platform:'Instagram', format:'Month Wrap-up',            is_posted:false, note:'', hook:"Month 1 is done. Here's to the 600M. 🥂", shoot:'Most important post of the month. Emotional, warm. Founder or team photo. Real, personal, not polished. This is the closer.', caption:"Month 1 is done. Here's to the 600M. 🥂\n\nFebruary 2026.\n\nWe launched a supplement nobody asked us to build — because we needed it ourselves.\n\nIn 28 days:\n→ Thousands of orders shipped\n→ Hundreds of stories in our DMs\n→ A community we didn't know we were building\n\nFor the person who found us at 2am after a bad night at a dinner party —\nFor the person who shared us with their college roommate —\nFor the person who finally stayed until the last dance —\n\nWe built this for you.\n\nMarch is next. Bring your celebrations.\n\nJoyn. Confidence in a capsule. 🧡\n\n#Joyn #OneMonth #ALDH2 #AlcoholFlush #ConfidenceInACapsule #ThankYou #WomanFounded #USAMade" },
 ]
 
 // ── small components ──────────────────────────────────────────────────────────
@@ -660,16 +122,15 @@ function Plat({ p }: { p: string }) {
   )
 }
 
-function PostedBtn({ id, posted, toggle }: { id: string; posted: Set<string>; toggle: (id: string) => void }) {
-  const done = posted.has(id)
+function PostedBtn({ id, is_posted, toggle }: { id: string; is_posted: boolean; toggle: (id: string) => void }) {
   return (
-    <button onClick={() => toggle(id)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${done ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'}`}>
-      {done ? '✓ Posted' : '○ Mark posted'}
+    <button onClick={() => toggle(id)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all shrink-0 ${is_posted ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'border border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-700'}`}>
+      {is_posted ? '✓ Posted' : '○ Mark posted'}
     </button>
   )
 }
 
-function WarnBanner({ warn, promoCode }: { warn?: string; promoCode?: string }) {
+function WarnBanner({ warn, promo_code }: { warn?: string; promo_code?: string }) {
   return (
     <>
       {warn && (
@@ -681,11 +142,11 @@ function WarnBanner({ warn, promoCode }: { warn?: string; promoCode?: string }) 
           </div>
         </div>
       )}
-      {promoCode && (
-        <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 mt-3">
+      {promo_code && (
+        <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 mt-3 gap-2 flex-wrap">
           <div className="flex items-center gap-2.5">
             <span className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-widest">Promo Code</span>
-            <span className="font-black text-[#0a0a0a] text-sm tracking-wide">{promoCode}</span>
+            <span className="font-black text-[#0a0a0a] text-sm tracking-wide">{promo_code}</span>
           </div>
           <span className="text-[10px] text-orange-400 font-semibold">Verify active in store before posting</span>
         </div>
@@ -699,6 +160,22 @@ function ShootBrief({ text }: { text: string }) {
     <div className="flex items-start gap-2 border-l-[3px] border-[#FD5C1E] bg-orange-50 rounded-r-xl px-4 py-3 mt-3">
       <span className="shrink-0 text-sm">📱</span>
       <p className="text-xs font-semibold leading-relaxed text-[#c44a18]">{text}</p>
+    </div>
+  )
+}
+
+// ── sync badge ────────────────────────────────────────────────────────────────
+function SyncBadge({ active }: { active: boolean }) {
+  if (!active) return (
+    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-500 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+      Local only
+    </div>
+  )
+  return (
+    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+      Team sync
     </div>
   )
 }
@@ -719,17 +196,12 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
   return (
     <div className="fixed inset-0 z-50 flex" style={{ fontFamily: 'inherit' }}>
       <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
-
-        {/* Header */}
+      <div className="w-full sm:max-w-lg bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <h2 className="font-black text-[#0a0a0a] text-lg">{isNew ? '+ Add Post' : 'Edit Post'}</h2>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">✕</button>
         </div>
-
-        {/* Fields */}
         <div className="px-6 py-6 space-y-5 flex-1">
-
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
               <span className={IL}>Date *</span>
@@ -740,7 +212,6 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
               <input type="text" value={form.format} onChange={e => up('format', e.target.value)} placeholder="e.g. Reel, Carousel" className={II} />
             </label>
           </div>
-
           <div>
             <span className={IL}>Platform *</span>
             <div className="flex gap-2">
@@ -753,37 +224,30 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
               ))}
             </div>
           </div>
-
           <label className="block">
             <span className={IL}>Hook *</span>
             <input type="text" value={form.hook} onChange={e => up('hook', e.target.value)} placeholder="The opening line that stops the scroll" className={II} />
           </label>
-
           <label className="block">
             <span className={IL}>Shoot Brief</span>
             <textarea value={form.shoot} onChange={e => up('shoot', e.target.value)} placeholder="What to film, shoot, or design" rows={3} className={IT} />
           </label>
-
           <label className="block">
             <span className={IL}>Caption *</span>
             <textarea value={form.caption} onChange={e => up('caption', e.target.value)} placeholder="Full caption including hashtags" rows={14} className={IT + ' font-mono text-xs leading-relaxed'} />
           </label>
-
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
               <span className={IL}>Promo Code</span>
-              <input type="text" value={form.promoCode ?? ''} onChange={e => up('promoCode', e.target.value || undefined)} placeholder="e.g. JOYN15" className={II} />
+              <input type="text" value={form.promo_code ?? ''} onChange={e => up('promo_code', e.target.value || undefined)} placeholder="e.g. JOYN15" className={II} />
             </label>
             <div />
           </div>
-
           <label className="block">
             <span className={IL}>Pre-Post Warning</span>
             <textarea value={form.warn ?? ''} onChange={e => up('warn', e.target.value || undefined)} placeholder="Reminder before posting (testimonials, approvals...)" rows={2} className={IT} />
           </label>
         </div>
-
-        {/* Actions */}
         <div className="px-6 pb-6 pt-4 border-t border-gray-100 space-y-2 sticky bottom-0 bg-white">
           <button onClick={() => { if (valid) { onSave(form); onClose() } }}
             className={`w-full py-3.5 rounded-xl font-black text-sm transition-all ${valid ? 'bg-[#FD5C1E] text-white hover:bg-[#e54d18]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
@@ -802,11 +266,17 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
 }
 
 // ── NoteArea ──────────────────────────────────────────────────────────────────
-function NoteArea({ id, notes, saveNote }: { id: string; notes: Record<string, string>; saveNote: (id: string, t: string) => void }) {
+function NoteArea({ note, onSave }: { note: string; onSave: (t: string) => void }) {
   const [open, setOpen] = useState(false)
-  const [val, setVal] = useState(notes[id] ?? '')
-  useEffect(() => { setVal(notes[id] ?? '') }, [notes, id])
-  const hasNote = !!(notes[id]?.trim())
+  const [val,  setVal]  = useState(note)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => { setVal(note) }, [note])
+  const hasNote = !!(note?.trim())
+  const handleChange = (t: string) => {
+    setVal(t)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => onSave(t), 600)
+  }
   return (
     <div className="mt-3 pt-3 border-t border-gray-100">
       <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors">
@@ -815,7 +285,7 @@ function NoteArea({ id, notes, saveNote }: { id: string; notes: Record<string, s
         {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
       </button>
       {open && (
-        <textarea value={val} onChange={e => { setVal(e.target.value); saveNote(id, e.target.value) }}
+        <textarea value={val} onChange={e => handleChange(e.target.value)}
           placeholder="Shoot date, assigned to, approvals needed..."
           className="mt-2 w-full text-xs text-gray-700 leading-relaxed bg-amber-50 border border-amber-100 rounded-xl p-3 min-h-[72px] resize-none focus:outline-none focus:border-amber-300 placeholder-gray-300" />
       )}
@@ -824,21 +294,23 @@ function NoteArea({ id, notes, saveNote }: { id: string; notes: Record<string, s
 }
 
 // ── SetupBanner ───────────────────────────────────────────────────────────────
-function SetupBanner() {
+function SetupBanner({ hasSupabase }: { hasSupabase: boolean }) {
   const [dismissed, setDismissed] = useState(true)
   useEffect(() => { setDismissed(localStorage.getItem('joyn-setup-done') === '1') }, [])
   if (dismissed) return null
   return (
     <div className="bg-[#003882] border-b border-blue-900">
-      <div className="max-w-screen-xl mx-auto px-6 lg:px-16 py-5">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-16 py-5">
         <div className="flex items-start gap-6 flex-wrap">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-3">Before your first post — 4 things to action</p>
+            <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-3">Before your first post</p>
             <div className="grid sm:grid-cols-2 gap-x-10 gap-y-2.5">
               {([
+                !hasSupabase
+                  ? ['Set up team sync', 'Visit /setup to connect Supabase — right now only you can see your edits']
+                  : ['Team sync active', 'Changes sync across all team members in real time'],
                 ['Verify all promo codes', 'Confirm JOYN15 and any [ADD CODE] placeholders are active in your Shopify store'],
                 ['Replace [Customer Name] placeholders', 'Posts 12 and 22 — click Edit Post and swap in real customers with permission'],
-                ['Replace the doctor quote on Feb 15', 'Click Edit Post → use your real medical advisor\'s words with written approval'],
                 ['Add your March posts', 'Use the + Add Post button on any day to build out next month\'s calendar'],
               ] as [string, string][]).map(([title, desc]) => (
                 <div key={title} className="flex items-start gap-2">
@@ -895,11 +367,12 @@ const TAGLINES = [
 
 // ── page ──────────────────────────────────────────────────────────────────────
 export default function Home() {
+  const USE_SB = !!supabase
+
   // ── state ─────────────────────────────────────────────────────────────────
   const [now,         setNow]         = useState<Date | null>(null)
-  const [posts,       setPosts]       = useState<Post[]>([])
-  const [posted,      setPosted]      = useState<Set<string>>(new Set())
-  const [notes,       setNotes]       = useState<Record<string, string>>({})
+  const [posts,       setPosts]       = useState<Post[]>(SEED)
+  const [loading,     setLoading]     = useState(true)
   const [editingPost, setEditingPost] = useState<Post | null>(null)
   const [addingPost,  setAddingPost]  = useState<Post | null>(null)
   const [viewMonth,   setViewMonth]   = useState({ year: 2026, month: 1 })
@@ -913,112 +386,177 @@ export default function Home() {
     const n = new Date()
     setNow(n)
     setViewMonth({ year: n.getFullYear(), month: n.getMonth() })
-    try {
-      // posts
-      const sp = localStorage.getItem('joyn-posts-v2')
-      setPosts(sp ? JSON.parse(sp) : SEED)
-      // posted
-      const sv = localStorage.getItem('joyn-posted')
-      if (sv) setPosted(new Set(JSON.parse(sv).map(String)))
-      // notes
-      const sn = localStorage.getItem('joyn-notes')
-      if (sn) setNotes(JSON.parse(sn))
-    } catch {
-      setPosts(SEED)
+
+    if (USE_SB && supabase) {
+      // ── Supabase mode ────────────────────────────────────────────────────
+      supabase.from('posts').select('*').order('date').then(({ data }) => {
+        if (data && data.length > 0) setPosts(data.map(dbToPost))
+        setLoading(false)
+      })
+
+      const channel = supabase.channel('posts-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async () => {
+          const { data } = await supabase!.from('posts').select('*').order('date')
+          if (data) setPosts(data.map(dbToPost))
+        })
+        .subscribe()
+
+      return () => { supabase!.removeChannel(channel) }
+    } else {
+      // ── localStorage fallback ─────────────────────────────────────────────
+      try {
+        const sp = localStorage.getItem('joyn-posts-v2')
+        if (sp) {
+          const parsed = JSON.parse(sp)
+          setPosts(parsed.map((p: Post & { promoCode?: string }) => ({
+            ...p,
+            promo_code: p.promo_code ?? p.promoCode,
+            is_posted:  p.is_posted  ?? false,
+            note:       p.note       ?? '',
+          })))
+        } else {
+          // migrate posted/notes from old format
+          const sv = localStorage.getItem('joyn-posted')
+          const sn = localStorage.getItem('joyn-notes')
+          const oldPosted: Set<string> = sv ? new Set(JSON.parse(sv).map(String)) : new Set()
+          const oldNotes: Record<string, string> = sn ? JSON.parse(sn) : {}
+          const migrated = SEED.map(p => ({
+            ...p,
+            is_posted: oldPosted.has(p.id),
+            note: oldNotes[p.id] ?? '',
+          }))
+          setPosts(migrated)
+          localStorage.setItem('joyn-posts-v2', JSON.stringify(migrated))
+        }
+      } catch { /* use SEED default */ }
+      setLoading(false)
     }
   }, [])
 
-  // ── post CRUD ─────────────────────────────────────────────────────────────
-  const savePosts = (next: Post[]) => {
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+  const lsSave = (next: Post[]) => {
     setPosts(next)
     localStorage.setItem('joyn-posts-v2', JSON.stringify(next))
   }
-  const updatePost = (p: Post) => savePosts(posts.map(x => x.id === p.id ? p : x))
-  const deletePost = (id: string) => savePosts(posts.filter(x => x.id !== id))
-  const addPost    = (p: Post) => savePosts([...posts, { ...p, id: newId() }].sort((a, b) => a.date.localeCompare(b.date)))
 
-  const togglePosted = (id: string) => {
-    setPosted(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) { next.delete(id) } else { next.add(id) }
-      localStorage.setItem('joyn-posted', JSON.stringify(Array.from(next)))
-      return next
-    })
+  const updatePost = async (p: Post) => {
+    if (USE_SB && supabase) {
+      setPosts(prev => prev.map(x => x.id === p.id ? p : x))
+      await supabase.from('posts').upsert({
+        id: p.id, date: p.date, platform: p.platform, format: p.format,
+        hook: p.hook, shoot: p.shoot, caption: p.caption,
+        warn: p.warn ?? null, promo_code: p.promo_code ?? null,
+        is_posted: p.is_posted, note: p.note,
+        updated_at: new Date().toISOString(),
+      })
+    } else {
+      lsSave(posts.map(x => x.id === p.id ? p : x))
+    }
   }
 
-  const saveNote = (id: string, text: string) => {
-    const next = { ...notes, [id]: text }
-    setNotes(next)
-    localStorage.setItem('joyn-notes', JSON.stringify(next))
+  const deletePost = async (id: string) => {
+    if (USE_SB && supabase) {
+      setPosts(prev => prev.filter(x => x.id !== id))
+      await supabase.from('posts').delete().eq('id', id)
+    } else {
+      lsSave(posts.filter(x => x.id !== id))
+    }
   }
 
-  // ── derived date values ───────────────────────────────────────────────────
-  const todayStr = now ? nowDateStr(now) : ''
-  const todayPosts = posts.filter(p => p.date === todayStr)
+  const addPost = async (p: Post) => {
+    const np: Post = { ...p, id: newId(), is_posted: false, note: p.note || '' }
+    const sorted = [...posts, np].sort((a, b) => a.date.localeCompare(b.date))
+    if (USE_SB && supabase) {
+      setPosts(sorted)
+      await supabase.from('posts').insert({
+        id: np.id, date: np.date, platform: np.platform, format: np.format,
+        hook: np.hook, shoot: np.shoot, caption: np.caption,
+        warn: np.warn ?? null, promo_code: np.promo_code ?? null,
+        is_posted: false, note: '',
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      })
+    } else {
+      lsSave(sorted)
+    }
+  }
+
+  const togglePosted = async (id: string) => {
+    const p = posts.find(x => x.id === id)
+    if (p) await updatePost({ ...p, is_posted: !p.is_posted })
+  }
+
+  const saveNote = async (id: string, note: string) => {
+    const p = posts.find(x => x.id === id)
+    if (p) await updatePost({ ...p, note })
+  }
+
+  // ── derived ───────────────────────────────────────────────────────────────
+  const todayStr     = now ? nowDateStr(now) : ''
+  const todayPosts   = posts.filter(p => p.date === todayStr)
   const upcomingPosts = now ? posts
     .filter(p => p.date > todayStr && p.date <= addDays(todayStr, 6))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5) : []
-  const totalPosted  = posted.size
-  const totalPosts   = posts.length
-  const noteCount    = Object.values(notes).filter(n => n.trim()).length
+  const totalPosted = posts.filter(p => p.is_posted).length
+  const totalPosts  = posts.length
+  const noteCount   = posts.filter(p => p.note?.trim()).length
 
   // ── calendar ──────────────────────────────────────────────────────────────
   const { year: calYear, month: calMonth } = viewMonth
-  const daysInMo  = new Date(calYear, calMonth + 1, 0).getDate()
-  const firstDay  = new Date(calYear, calMonth, 1).getDay()
+  const daysInMo   = new Date(calYear, calMonth + 1, 0).getDate()
+  const firstDay   = new Date(calYear, calMonth, 1).getDay()
   const monthLabel = `${MONTH_NAMES[calMonth]} ${calYear}`
-  const prevMonth = () => setViewMonth(m => m.month === 0  ? { year: m.year - 1, month: 11 } : { year: m.year, month: m.month - 1 })
-  const nextMonth = () => setViewMonth(m => m.month === 11 ? { year: m.year + 1, month: 0  } : { year: m.year, month: m.month + 1 })
-  const calDayStr = (d: number) => toDateStr(calYear, calMonth, d)
-  const monthPosts = posts.filter(p => {
-    const [y, m] = p.date.split('-').map(Number)
-    return y === calYear && m - 1 === calMonth
-  })
-  const selPosts = selDate ? posts.filter(p => p.date === selDate) : []
+  const prevMonth  = () => setViewMonth(m => m.month === 0  ? { year: m.year - 1, month: 11 } : { year: m.year, month: m.month - 1 })
+  const nextMonth  = () => setViewMonth(m => m.month === 11 ? { year: m.year + 1, month: 0  } : { year: m.year, month: m.month + 1 })
+  const calDayStr  = (d: number) => toDateStr(calYear, calMonth, d)
+  const monthPosts = posts.filter(p => { const [y,m] = p.date.split('-').map(Number); return y === calYear && m - 1 === calMonth })
+  const selPosts   = selDate ? posts.filter(p => p.date === selDate) : []
   const totalCells = Math.ceil((firstDay + daysInMo) / 7) * 7
 
   // ── caption library ───────────────────────────────────────────────────────
   const filteredLib = posts
     .filter(p => pf === 'All' || p.platform === pf)
-    .filter(p => !hidePosted || !posted.has(p.id))
+    .filter(p => !hidePosted || !p.is_posted)
     .filter(p => !search || [p.hook, p.caption].some(t => t.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  // ── blank post for "Add Post" ─────────────────────────────────────────────
   const blankPost = (date?: string): Post => ({
-    id: '', date: date ?? todayStr, platform: 'TikTok', format: '', hook: '', shoot: '', caption: '',
+    id: '', date: date ?? todayStr, platform: 'TikTok', format: '', hook: '', shoot: '', caption: '', is_posted: false, note: '',
   })
 
   // ── render ────────────────────────────────────────────────────────────────
+  if (loading) return (
+    <main className="min-h-screen bg-[#fafafa] flex items-center justify-center pt-14">
+      <div className="text-center">
+        <div className="w-8 h-8 rounded-full bg-[#FD5C1E] mx-auto mb-4 animate-pulse" />
+        <p className="text-sm text-gray-400 font-medium">Loading strategy hub...</p>
+      </div>
+    </main>
+  )
+
   return (
-    <main className="min-h-screen bg-[#fafafa]">
+    <main className="min-h-screen bg-[#fafafa] pt-14">
 
       {/* Modals */}
-      {editingPost && (
-        <PostEditor post={editingPost} onSave={updatePost} onDelete={deletePost}
-          onClose={() => setEditingPost(null)} />
-      )}
-      {addingPost && (
-        <PostEditor post={addingPost} onSave={addPost} isNew
-          onClose={() => setAddingPost(null)} />
-      )}
+      {editingPost && <PostEditor post={editingPost} onSave={updatePost} onDelete={deletePost} onClose={() => setEditingPost(null)} />}
+      {addingPost  && <PostEditor post={addingPost}  onSave={addPost}    isNew              onClose={() => setAddingPost(null)}  />}
 
-      <SetupBanner />
+      <SetupBanner hasSupabase={USE_SB} />
 
       {/* ── TODAY ──────────────────────────────────────────────────────── */}
       <section id="today" className="section-anchor border-b border-gray-100">
 
         {/* Stats bar */}
-        <div className="bg-white border-b border-gray-100 px-6 lg:px-16 py-5">
-          <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
+        <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-16 py-4 sm:py-5">
+          <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-1">Today</p>
-              <h1 className="text-2xl lg:text-3xl font-black text-[#0a0a0a] leading-none">
-                {now ? `${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}` : '—'}
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#0a0a0a] leading-none">
+                {now ? `${DAY_FULL[now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}` : '—'}
               </h1>
             </div>
-            <div className="flex items-center gap-5 flex-wrap">
+            <div className="flex items-center gap-3 sm:gap-5 flex-wrap">
+              <SyncBadge active={USE_SB} />
               {noteCount > 0 && (
                 <div className="text-right">
                   <div className="text-xl font-black text-[#003882]">{noteCount}</div>
@@ -1029,7 +567,7 @@ export default function Home() {
                 <div className="text-xl font-black text-[#0a0a0a]">{totalPosted}<span className="text-sm text-gray-300 font-normal">/{totalPosts}</span></div>
                 <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">published</div>
               </div>
-              <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-20 sm:w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-[#FD5C1E] rounded-full transition-all duration-500"
                   style={{ width: totalPosts ? `${(totalPosted / totalPosts) * 100}%` : '0%' }} />
               </div>
@@ -1038,11 +576,10 @@ export default function Home() {
         </div>
 
         {/* Posts for today */}
-        <div className="px-6 lg:px-16 py-8">
+        <div className="px-4 sm:px-6 lg:px-16 py-6 sm:py-8">
           <div className="max-w-screen-xl mx-auto">
-
             {todayPosts.length === 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center mb-6">
+              <div className="bg-white border border-gray-200 rounded-2xl p-8 sm:p-10 text-center mb-6">
                 {now ? (
                   <>
                     <p className="text-lg font-black text-[#0a0a0a] mb-2">No posts scheduled today.</p>
@@ -1057,34 +594,31 @@ export default function Home() {
                 )}
               </div>
             )}
-
             <div className="space-y-4">
               {todayPosts.map(p => (
                 <div key={p.id}
-                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden transition-all ${posted.has(p.id) ? 'border-l-green-400 border-green-100 opacity-60' : 'border-gray-100'}`}
-                  style={!posted.has(p.id) ? { borderLeftColor: PC[p.platform] } : undefined}>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4 gap-3">
+                  className={`bg-white rounded-2xl border-l-4 border overflow-hidden transition-all ${p.is_posted ? 'border-l-green-400 border-green-100 opacity-60' : 'border-gray-100'}`}
+                  style={!p.is_posted ? { borderLeftColor: PC[p.platform] } : undefined}>
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Plat p={p.platform} />
                         {p.format && <span className="text-xs font-semibold text-gray-400">{p.format}</span>}
-                        {notes[p.id]?.trim() && <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>}
+                        {p.note?.trim() && <span className="text-[10px] font-black text-[#003882] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Has note</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => setEditingPost(p)} className="text-xs font-bold text-gray-400 hover:text-[#FD5C1E] transition-colors px-2 py-1 border border-gray-200 rounded-lg hover:border-[#FD5C1E]">Edit Post</button>
-                        <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
+                        <button onClick={() => setEditingPost(p)} className="text-xs font-bold text-gray-400 hover:text-[#FD5C1E] transition-colors px-2 py-1 border border-gray-200 rounded-lg hover:border-[#FD5C1E]">Edit</button>
+                        <PostedBtn id={p.id} is_posted={p.is_posted} toggle={togglePosted} />
                       </div>
                     </div>
-                    <h2 className="text-xl lg:text-2xl font-black text-[#0a0a0a] mb-3 leading-tight">&ldquo;{p.hook}&rdquo;</h2>
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-[#0a0a0a] mb-3 leading-tight">&ldquo;{p.hook}&rdquo;</h2>
                     <ShootBrief text={p.shoot} />
-                    <WarnBanner warn={p.warn} promoCode={p.promoCode} />
+                    <WarnBanner warn={p.warn} promo_code={p.promo_code} />
                     <div className="mt-4">
                       <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">{p.caption}</div>
-                      <div className="mt-3">
-                        <CopyFull text={p.caption} />
-                      </div>
+                      <div className="mt-3"><CopyFull text={p.caption} /></div>
                     </div>
-                    <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
+                    <NoteArea note={p.note} onSave={note => saveNote(p.id, note)} />
                   </div>
                 </div>
               ))}
@@ -1094,11 +628,11 @@ export default function Home() {
             {upcomingPosts.length > 0 && (
               <div className="mt-8">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Coming up</p>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {upcomingPosts.map(u => (
                     <button key={u.id}
                       onClick={() => { setSelDate(u.date); setViewMonth({ year: parseInt(u.date.slice(0,4)), month: parseInt(u.date.slice(5,7))-1 }); document.getElementById('calendar')?.scrollIntoView({ behavior: 'smooth' }) }}
-                      className="bg-white rounded-xl border border-gray-100 p-4 text-left hover:border-[#FD5C1E] transition-all group">
+                      className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 text-left hover:border-[#FD5C1E] transition-all group">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-black text-gray-400">{formatDisplayDate(u.date).slice(0,-6)}</span>
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: PC[u.platform] }} />
@@ -1114,15 +648,14 @@ export default function Home() {
       </section>
 
       {/* ── CALENDAR ───────────────────────────────────────────────────── */}
-      <section id="calendar" className="section-anchor px-6 lg:px-16 py-16 bg-[#FFF8F4] border-b border-orange-100">
+      <section id="calendar" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 bg-[#FFF8F4] border-b border-orange-100">
         <div className="max-w-screen-xl mx-auto">
-
-          <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+          <div className="flex items-center justify-between mb-6 sm:mb-8 flex-wrap gap-4">
             <div>
               <p className="text-xs font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-2">Content Calendar</p>
               <div className="flex items-center gap-3">
                 <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-orange-100 hover:border-[#FD5C1E] text-gray-500 hover:text-[#FD5C1E] transition-all text-lg">‹</button>
-                <h2 className="text-3xl font-black text-[#0a0a0a]">{monthLabel}</h2>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#0a0a0a]">{monthLabel}</h2>
                 <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-orange-100 hover:border-[#FD5C1E] text-gray-500 hover:text-[#FD5C1E] transition-all text-lg">›</button>
                 {now && (calYear !== now.getFullYear() || calMonth !== now.getMonth()) && (
                   <button onClick={() => setViewMonth({ year: now.getFullYear(), month: now.getMonth() })}
@@ -1130,7 +663,7 @@ export default function Home() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
               {Object.entries({ TikTok: '#FD5C1E', Instagram: '#E1306C', Pinterest: '#E60023' }).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: v }} />{k}
@@ -1140,40 +673,42 @@ export default function Home() {
           </div>
 
           <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
-            {/* Day headers */}
             <div className="grid grid-cols-7 border-b border-orange-50">
-              {DAY_NAMES.map(d => (
-                <div key={d} className="py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">{d}</div>
+              {DAY_NAMES.map((d, i) => (
+                <div key={i} className="py-2 sm:py-3 text-center text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest">
+                  <span className="hidden sm:inline">{DAY_FULL[i]}</span>
+                  <span className="sm:hidden">{d}</span>
+                </div>
               ))}
             </div>
-            {/* Calendar grid */}
             <div className="grid grid-cols-7">
               {Array.from({ length: totalCells }, (_, i) => {
-                const dayNum = i - firstDay + 1
+                const dayNum  = i - firstDay + 1
                 const isValid = dayNum >= 1 && dayNum <= daysInMo
-                const ds = isValid ? calDayStr(dayNum) : ''
+                const ds      = isValid ? calDayStr(dayNum) : ''
                 const dayPosts = isValid ? monthPosts.filter(p => p.date === ds) : []
-                const isToday = ds === todayStr
-                const isSel   = ds === selDate
-                const allDone = dayPosts.length > 0 && dayPosts.every(p => posted.has(p.id))
+                const isToday  = ds === todayStr
+                const isSel    = ds === selDate
+                const allDone  = dayPosts.length > 0 && dayPosts.every(p => p.is_posted)
                 return (
-                  <div key={i} className={`min-h-[88px] border-b border-r border-orange-50 last:border-r-0 transition-all ${isValid ? (isSel ? 'ring-2 ring-inset ring-[#FD5C1E]' : '') : 'bg-gray-50/30'}`}>
+                  <div key={i} className={`min-h-[56px] sm:min-h-[88px] border-b border-r border-orange-50 last:border-r-0 transition-all ${isValid ? (isSel ? 'ring-2 ring-inset ring-[#FD5C1E]' : '') : 'bg-gray-50/30'}`}>
                     {isValid && (
-                      <button className={`w-full h-full p-2.5 text-left ${isToday ? 'bg-orange-50/60' : 'hover:bg-orange-50/40'} transition-all`}
+                      <button className={`w-full h-full p-1.5 sm:p-2.5 text-left ${isToday ? 'bg-orange-50/60' : 'hover:bg-orange-50/40'} transition-all`}
                         onClick={() => setSelDate(ds === selDate ? null : ds)}>
-                        <div className={`text-xs font-black mb-1.5 flex items-center gap-1.5 ${isToday ? 'text-[#FD5C1E]' : 'text-gray-300'}`}>
+                        <div className={`text-[10px] sm:text-xs font-black mb-1 sm:mb-1.5 flex items-center gap-1 ${isToday ? 'text-[#FD5C1E]' : 'text-gray-300'}`}>
                           {dayNum}
-                          {isToday && <span className="text-[9px] bg-[#FD5C1E] text-white px-1.5 py-0.5 rounded font-black leading-none">TODAY</span>}
-                          {allDone && <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded font-black leading-none">✓</span>}
+                          {isToday && <span className="hidden sm:inline text-[9px] bg-[#FD5C1E] text-white px-1 py-0.5 rounded font-black leading-none">TODAY</span>}
+                          {allDone && <span className="text-[9px] bg-green-500 text-white px-1 py-0.5 rounded font-black leading-none">✓</span>}
                         </div>
                         <div className="space-y-0.5">
-                          {dayPosts.map(dp => (
+                          {dayPosts.slice(0, 2).map(dp => (
                             <div key={dp.id} className="flex items-start gap-1">
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[3px] ${posted.has(dp.id) ? 'opacity-30' : ''}`}
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-[3px] ${dp.is_posted ? 'opacity-30' : ''}`}
                                 style={{ backgroundColor: PC[dp.platform] }} />
-                              <span className={`text-[10px] leading-tight line-clamp-2 ${posted.has(dp.id) ? 'text-gray-300 line-through' : 'text-gray-500'}`}>{dp.hook}</span>
+                              <span className={`text-[9px] sm:text-[10px] leading-tight line-clamp-1 ${dp.is_posted ? 'text-gray-300 line-through' : 'text-gray-500'}`}>{dp.hook}</span>
                             </div>
                           ))}
+                          {dayPosts.length > 2 && <span className="text-[9px] text-gray-400">+{dayPosts.length - 2}</span>}
                         </div>
                       </button>
                     )}
@@ -1183,7 +718,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Add Post CTA below calendar */}
           <div className="mt-3 flex justify-end">
             <button onClick={() => setAddingPost(blankPost(selDate ?? todayStr))}
               className="flex items-center gap-2 text-sm font-bold text-[#FD5C1E] hover:underline">
@@ -1191,12 +725,11 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Expanded day */}
           {selDate && (
             <div className="mt-4 bg-white border-2 border-[#FD5C1E] rounded-2xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-orange-100 flex items-center justify-between">
+              <div className="px-4 sm:px-6 py-4 border-b border-orange-100 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-black text-[#0a0a0a] text-lg">{formatDisplayDate(selDate)}</h3>
+                  <h3 className="font-black text-[#0a0a0a] text-base sm:text-lg">{formatDisplayDate(selDate)}</h3>
                   {selDate === todayStr && <span className="text-xs bg-[#FD5C1E] text-white px-2.5 py-0.5 rounded-full font-black">TODAY</span>}
                 </div>
                 <div className="flex items-center gap-3">
@@ -1208,7 +741,6 @@ export default function Home() {
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors text-lg">×</button>
                 </div>
               </div>
-
               {selPosts.length === 0 ? (
                 <div className="p-8 text-center">
                   <p className="text-gray-400 text-sm mb-4">No posts scheduled for {formatDisplayDate(selDate)}.</p>
@@ -1220,25 +752,25 @@ export default function Home() {
               ) : (
                 <div className="divide-y divide-orange-50">
                   {selPosts.map(p => (
-                    <div key={p.id} className="p-6">
-                      <div className="flex items-center justify-between mb-4 gap-3">
+                    <div key={p.id} className="p-4 sm:p-6">
+                      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Plat p={p.platform} />
                           {p.format && <span className="text-xs text-gray-400 font-semibold">{p.format}</span>}
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => setEditingPost(p)} className="text-xs font-bold text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
-                          <PostedBtn id={p.id} posted={posted} toggle={togglePosted} />
+                          <PostedBtn id={p.id} is_posted={p.is_posted} toggle={togglePosted} />
                         </div>
                       </div>
                       <h4 className="font-black text-[#0a0a0a] text-base mb-3 leading-snug">&ldquo;{p.hook}&rdquo;</h4>
                       <ShootBrief text={p.shoot} />
-                      <WarnBanner warn={p.warn} promoCode={p.promoCode} />
+                      <WarnBanner warn={p.warn} promo_code={p.promo_code} />
                       <div className="mt-4">
                         <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 mb-3">{p.caption}</div>
                         <CopyFull text={p.caption} />
                       </div>
-                      <NoteArea id={p.id} notes={notes} saveNote={saveNote} />
+                      <NoteArea note={p.note} onSave={note => saveNote(p.id, note)} />
                     </div>
                   ))}
                 </div>
@@ -1249,22 +781,21 @@ export default function Home() {
       </section>
 
       {/* ── CAPTION LIBRARY ─────────────────────────────────────────────── */}
-      <section id="captions" className="section-anchor px-6 lg:px-16 py-16 border-b border-gray-100">
+      <section id="captions" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
           <div className="flex items-end justify-between mb-2 flex-wrap gap-4">
             <div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Caption Library</p>
-              <h2 className="text-4xl font-black text-[#0a0a0a]">{totalPosts} captions. All editable.</h2>
+              <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a]">{totalPosts} captions. All editable.</h2>
             </div>
             <button onClick={() => setAddingPost(blankPost())}
               className="bg-[#FD5C1E] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#e54d18] transition-all whitespace-nowrap">
               + Add Post
             </button>
           </div>
-          <p className="text-gray-400 text-base mb-6">Click Edit Post on any card to change anything — date, platform, caption, everything. Changes save to your browser.</p>
+          <p className="text-gray-400 text-sm sm:text-base mb-6">Click Edit on any card to change anything. {USE_SB ? 'Changes sync to all team members instantly.' : 'Changes save to your browser.'}</p>
 
-          {/* Search + Filters */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row gap-3">
+          <div className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 mb-8 flex flex-col sm:flex-row gap-3">
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search captions by hook or copy..."
               className="flex-1 text-sm text-gray-700 placeholder-gray-300 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FD5C1E] transition-colors" />
@@ -1293,10 +824,10 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 gap-5">
             {filteredLib.map(cap => (
-              <div key={cap.id} className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col transition-all ${posted.has(cap.id) ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100 hover:border-gray-200'}`}
-                style={!posted.has(cap.id) ? { borderLeftColor: PC[cap.platform] } : undefined}>
-                <div className="p-5 flex flex-col flex-1">
-                  <div className="flex items-start justify-between gap-2 mb-3">
+              <div key={cap.id} className={`bg-white rounded-2xl border-l-4 border overflow-hidden flex flex-col transition-all ${cap.is_posted ? 'border-l-green-400 border-green-100 opacity-50' : 'border-gray-100 hover:border-gray-200'}`}
+                style={!cap.is_posted ? { borderLeftColor: PC[cap.platform] } : undefined}>
+                <div className="p-4 sm:p-5 flex flex-col flex-1">
+                  <div className="flex items-start justify-between gap-2 mb-3 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Plat p={cap.platform} />
                       <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{formatDisplayDate(cap.date)}</span>
@@ -1304,17 +835,15 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button onClick={() => setEditingPost(cap)} className="text-[10px] font-bold text-gray-400 hover:text-[#FD5C1E] border border-gray-200 hover:border-[#FD5C1E] px-2 py-1 rounded-lg transition-all">Edit</button>
-                      <PostedBtn id={cap.id} posted={posted} toggle={togglePosted} />
+                      <PostedBtn id={cap.id} is_posted={cap.is_posted} toggle={togglePosted} />
                     </div>
                   </div>
                   <h3 className="font-black text-[#0a0a0a] text-sm leading-snug mb-3">&ldquo;{cap.hook}&rdquo;</h3>
                   {cap.shoot && <ShootBrief text={cap.shoot} />}
-                  <WarnBanner warn={cap.warn} promoCode={cap.promoCode} />
+                  <WarnBanner warn={cap.warn} promo_code={cap.promo_code} />
                   <div className="mt-3 flex-1 text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">{cap.caption}</div>
-                  <div className="mt-3">
-                    <CopyFull text={cap.caption} />
-                  </div>
-                  <NoteArea id={cap.id} notes={notes} saveNote={saveNote} />
+                  <div className="mt-3"><CopyFull text={cap.caption} /></div>
+                  <NoteArea note={cap.note} onSave={note => saveNote(cap.id, note)} />
                 </div>
               </div>
             ))}
@@ -1323,11 +852,11 @@ export default function Home() {
       </section>
 
       {/* ── HASHTAGS ────────────────────────────────────────────────────── */}
-      <section id="hashtags" className="section-anchor px-6 lg:px-16 py-16 bg-gray-50 border-b border-gray-100">
+      <section id="hashtags" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 bg-gray-50 border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Hashtag Sets</p>
-          <h2 className="text-4xl font-black text-[#0a0a0a] mb-10">Six packs. Copy and go.</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a] mb-8 sm:mb-10">Six packs. Copy and go.</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {HASHTAGS.map(set => {
               const raw = set.tags.includes(',') ? set.tags.split(', ') : set.tags.split(' ')
               return (
@@ -1351,15 +880,15 @@ export default function Home() {
       </section>
 
       {/* ── ADS ─────────────────────────────────────────────────────────── */}
-      <section id="ads" className="section-anchor px-6 lg:px-16 py-16 bg-[#0a0a0a] border-b border-gray-800">
+      <section id="ads" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16 bg-[#0a0a0a] border-b border-gray-800">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-600 uppercase tracking-[0.2em] mb-3">Ad Copy</p>
-          <h2 className="text-4xl font-black text-white mb-3">Four complete ad sets.</h2>
-          <p className="text-gray-500 text-lg mb-12">Copy-ready for Meta Ads Manager and TikTok Ads.</p>
+          <h2 className="text-2xl sm:text-4xl font-black text-white mb-3">Four complete ad sets.</h2>
+          <p className="text-gray-500 text-base sm:text-lg mb-10 sm:mb-12">Copy-ready for Meta Ads Manager and TikTok Ads.</p>
           <div className="grid md:grid-cols-2 gap-6">
             {ADS.map(ad => (
               <div key={ad.id} className="border border-white/10 rounded-2xl overflow-hidden">
-                <div className="bg-white/[0.03] px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                <div className="bg-white/[0.03] px-4 sm:px-6 py-4 border-b border-white/[0.06] flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-white/40 uppercase tracking-widest">{ad.platform}</span>
                     <span className="text-white/20">·</span>
@@ -1367,7 +896,7 @@ export default function Home() {
                   </div>
                   <Copy text={`Hook: ${ad.hook}\n\nHeadline: ${ad.headline}\n\nBody: ${ad.body}\n\nCTA: ${ad.cta}`} label="Copy Full Set" variant="ghost" />
                 </div>
-                <div className="p-6 space-y-3">
+                <div className="p-4 sm:p-6 space-y-3">
                   {[
                     { label: 'Hook', text: ad.hook },
                     { label: 'Headline', text: ad.headline },
@@ -1383,7 +912,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <div className="px-6 pb-6">
+                <div className="px-4 sm:px-6 pb-6">
                   <p className="text-xs text-gray-600 italic">{ad.note}</p>
                 </div>
               </div>
@@ -1393,18 +922,17 @@ export default function Home() {
       </section>
 
       {/* ── BRAND ───────────────────────────────────────────────────────── */}
-      <section id="brand" className="section-anchor px-6 lg:px-16 py-16">
+      <section id="brand" className="section-anchor px-4 sm:px-6 lg:px-16 py-10 sm:py-16">
         <div className="max-w-screen-xl mx-auto">
           <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Brand Kit</p>
-          <h2 className="text-4xl font-black text-[#0a0a0a] mb-12">How Joyn looks. How Joyn sounds.</h2>
-          <div className="grid lg:grid-cols-3 gap-12">
-
+          <h2 className="text-2xl sm:text-4xl font-black text-[#0a0a0a] mb-10 sm:mb-12">How Joyn looks. How Joyn sounds.</h2>
+          <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Colors — click to copy hex</h3>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {COLORS.map(c => (
                   <button key={c.hex} className="group text-left" onClick={() => navigator.clipboard.writeText(c.hex)}>
-                    <div className="h-16 rounded-xl mb-2 relative overflow-hidden" style={{ backgroundColor: c.hex }}>
+                    <div className="h-14 sm:h-16 rounded-xl mb-2 relative overflow-hidden" style={{ backgroundColor: c.hex }}>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
                         <span className="text-white text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">Copy</span>
                       </div>
@@ -1433,7 +961,6 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Voice — DO / DON&apos;T</h3>
               <div className="space-y-3 mb-10">
@@ -1460,7 +987,6 @@ export default function Home() {
                 <p className="text-sm font-semibold leading-relaxed">For young adults (21–40) with ALDH2 deficiency. Joyn is the only proactive, flush-first supplement — woman-founded, USA-made, built for the 600M who&apos;ve been ignored by every other brand.</p>
               </div>
             </div>
-
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-5">Tagline Bank</h3>
               <div className="space-y-0">
@@ -1485,16 +1011,16 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="px-6 lg:px-16 py-10 bg-[#0a0a0a]">
+      <footer className="px-4 sm:px-6 lg:px-16 py-8 sm:py-10 bg-[#0a0a0a]">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
           <div>
             <div className="text-white font-black">JOYN · Social Playbook</div>
-            <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · all platforms · copy-ready · editable · saves to your browser</div>
+            <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · all platforms · copy-ready · {USE_SB ? 'team sync active' : 'local mode — see /setup'}</div>
           </div>
-          <div className="flex items-center gap-5">
-            <button onClick={() => { if (window.confirm('Reset all data to defaults? This will delete any custom posts, edits, and progress.')) { localStorage.clear(); window.location.reload() } }}
+          <div className="flex items-center gap-4 sm:gap-5 flex-wrap">
+            <button onClick={() => { if (window.confirm('Reset all data? This will delete any custom posts, edits, and progress.')) { localStorage.clear(); window.location.reload() } }}
               className="text-gray-600 text-xs font-semibold hover:text-gray-400 transition-colors">
-              Reset all data
+              Reset data
             </button>
             <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
               className="text-[#FD5C1E] text-sm font-bold hover:underline">
