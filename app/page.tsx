@@ -318,7 +318,11 @@ function NoteArea({ note, onSave }: { note: string; onSave: (t: string) => void 
   const [open, setOpen] = useState(false)
   const [val,  setVal]  = useState(note)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => { setVal(note) }, [note])
+  const prevNoteRef = useRef(note)
+  if (prevNoteRef.current !== note) {
+    prevNoteRef.current = note
+    setVal(note)
+  }
   const hasNote = !!(note?.trim())
   const handleChange = (t: string) => {
     setVal(t)
