@@ -405,7 +405,7 @@ export default function Home() {
     } else {
       // ── localStorage fallback ─────────────────────────────────────────────
       try {
-        const sp = localStorage.getItem('joyn-posts-v2')
+        const sp = localStorage.getItem('joyn-posts-v3')
         if (sp) {
           const parsed = JSON.parse(sp)
           setPosts(parsed.map((p: Post & { promoCode?: string }) => ({
@@ -426,7 +426,7 @@ export default function Home() {
             note: oldNotes[p.id] ?? '',
           }))
           setPosts(migrated)
-          localStorage.setItem('joyn-posts-v2', JSON.stringify(migrated))
+          localStorage.setItem('joyn-posts-v3', JSON.stringify(migrated))
         }
       } catch { /* use SEED default */ }
       setLoading(false)
@@ -436,7 +436,7 @@ export default function Home() {
   // ── CRUD ──────────────────────────────────────────────────────────────────
   const lsSave = (next: Post[]) => {
     setPosts(next)
-    localStorage.setItem('joyn-posts-v2', JSON.stringify(next))
+    localStorage.setItem('joyn-posts-v3', JSON.stringify(next))
   }
 
   const updatePost = async (p: Post) => {
