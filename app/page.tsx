@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useReducer } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -307,16 +308,9 @@ function PostEditor({ post, onSave, onDelete, onClose, isNew = false }: {
 // ── NoteArea ──────────────────────────────────────────────────────────────────
 function NoteArea({ note, onSave }: { note: string; onSave: (t: string) => void }) {
   const [open, setOpen] = useState(false)
-  const [val,  setVal]  = useState(note)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const prevNoteRef = useRef(note)
-  if (prevNoteRef.current !== note) {
-    prevNoteRef.current = note
-    setVal(note)
-  }
   const hasNote = !!(note?.trim())
   const handleChange = (t: string) => {
-    setVal(t)
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => onSave(t), 600)
   }
@@ -328,7 +322,7 @@ function NoteArea({ note, onSave }: { note: string; onSave: (t: string) => void 
         {hasNote && <span className="w-1.5 h-1.5 rounded-full bg-amber-300 shrink-0" />}
       </button>
       {open && (
-        <textarea value={val} onChange={e => handleChange(e.target.value)}
+        <textarea defaultValue={note} onChange={e => handleChange(e.target.value)}
           placeholder="Shoot date, assigned to, approvals needed..."
           className="mt-2 w-full text-xs text-gray-700 leading-relaxed bg-amber-50 border border-amber-100 rounded-xl p-3 min-h-[72px] resize-none focus:outline-none focus:border-amber-300 placeholder-gray-300" />
       )}
@@ -409,39 +403,106 @@ const TAGLINES = [
   { line: 'Celebrate without limits.',             note: 'Campaign tagline' },
 ]
 
+// ── page reducer ──────────────────────────────────────────────────────────────
+type HomeState = {
+  now:         Date | null
+  posts:       Post[]
+  loading:     boolean
+  editingPost: Post | null
+  addingPost:  Post | null
+  viewMonth:   { year: number; month: number }
+  selDate:     string | null
+  pf:          PF
+  hidePosted:  boolean
+  search:      string
+}
+
+type HomeAction =
+  | { type: 'INIT'; now: Date; posts: Post[] }
+  | { type: 'SET_POSTS'; posts: Post[] }
+  | { type: 'SET_LOADING'; loading: boolean }
+  | { type: 'SET_EDITING_POST'; post: Post | null }
+  | { type: 'SET_ADDING_POST'; post: Post | null }
+  | { type: 'SET_VIEW_MONTH'; year: number; month: number }
+  | { type: 'SET_SEL_DATE'; date: string | null }
+  | { type: 'SET_PF'; pf: PF }
+  | { type: 'SET_HIDE_POSTED'; hide: boolean }
+  | { type: 'SET_SEARCH'; search: string }
+
+function homeReducer(state: HomeState, action: HomeAction): HomeState {
+  switch (action.type) {
+    case 'INIT':
+      return { ...state, now: action.now, posts: action.posts,
+               viewMonth: { year: action.now.getFullYear(), month: action.now.getMonth() } }
+    case 'SET_POSTS':       return { ...state, posts: action.posts }
+    case 'SET_LOADING':     return { ...state, loading: action.loading }
+    case 'SET_EDITING_POST':return { ...state, editingPost: action.post }
+    case 'SET_ADDING_POST': return { ...state, addingPost: action.post }
+    case 'SET_VIEW_MONTH':  return { ...state, viewMonth: { year: action.year, month: action.month } }
+    case 'SET_SEL_DATE':    return { ...state, selDate: action.date }
+    case 'SET_PF':          return { ...state, pf: action.pf }
+    case 'SET_HIDE_POSTED': return { ...state, hidePosted: action.hide }
+    case 'SET_SEARCH':      return { ...state, search: action.search }
+    default:                return state
+  }
+}
+
+const HOME_INITIAL: HomeState = {
+  now:         null,
+  posts:       SEED,
+  loading:     true,
+  editingPost: null,
+  addingPost:  null,
+  viewMonth:   { year: 2026, month: 1 },
+  selDate:     null,
+  pf:          'All',
+  hidePosted:  false,
+  search:      '',
+}
+
 // ── page ──────────────────────────────────────────────────────────────────────
 export default function Home() {
   const USE_SB = !!supabase
 
   // ── state ─────────────────────────────────────────────────────────────────
-  const [now,         setNow]         = useState<Date | null>(null)
-  const [posts,       setPosts]       = useState<Post[]>(SEED)
-  const [loading,     setLoading]     = useState(true)
-  const [editingPost, setEditingPost] = useState<Post | null>(null)
-  const [addingPost,  setAddingPost]  = useState<Post | null>(null)
-  const [viewMonth,   setViewMonth]   = useState({ year: 2026, month: 1 })
-  const [selDate,     setSelDate]     = useState<string | null>(null)
-  const [pf,          setPf]          = useState<PF>('All')
-  const [hidePosted,  setHidePosted]  = useState(false)
-  const [search,      setSearch]      = useState('')
+  const [state, dispatch] = useReducer(homeReducer, HOME_INITIAL)
+  const { now, posts, loading, editingPost, addingPost, viewMonth, selDate, pf, hidePosted, search } = state
+
+  const setNow         = (now: Date) => dispatch({ type: 'INIT', now, posts: state.posts })
+  const setPosts       = (posts: Post[]) => dispatch({ type: 'SET_POSTS', posts })
+  const setLoading     = (loading: boolean) => dispatch({ type: 'SET_LOADING', loading })
+  const setEditingPost = (post: Post | null) => dispatch({ type: 'SET_EDITING_POST', post })
+  const setAddingPost  = (post: Post | null) => dispatch({ type: 'SET_ADDING_POST', post })
+  const setViewMonth   = (updater: { year: number; month: number } | ((m: { year: number; month: number }) => { year: number; month: number })) => {
+    const next = typeof updater === 'function' ? updater(state.viewMonth) : updater
+    dispatch({ type: 'SET_VIEW_MONTH', year: next.year, month: next.month })
+  }
+  const setSelDate     = (date: string | null) => dispatch({ type: 'SET_SEL_DATE', date })
+  const setPf          = (pf: PF) => dispatch({ type: 'SET_PF', pf })
+  const setHidePosted  = (updater: boolean | ((h: boolean) => boolean)) => {
+    const next = typeof updater === 'function' ? updater(state.hidePosted) : updater
+    dispatch({ type: 'SET_HIDE_POSTED', hide: next })
+  }
+  const setSearch      = (search: string) => dispatch({ type: 'SET_SEARCH', search })
 
   // ── init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const n = new Date()
-    setNow(n)
-    setViewMonth({ year: n.getFullYear(), month: n.getMonth() })
+    const initPosts = (loadedPosts: Post[]) =>
+      dispatch({ type: 'INIT', now: n, posts: loadedPosts })
 
     if (USE_SB && supabase) {
       // ── Supabase mode ────────────────────────────────────────────────────
       supabase.from('posts').select('*').order('date').then(({ data }) => {
-        if (data && data.length > 0) setPosts(data.map(dbToPost))
-        setLoading(false)
+        const loadedPosts = data && data.length > 0 ? data.map(dbToPost) : SEED
+        dispatch({ type: 'INIT', now: n, posts: loadedPosts })
+        dispatch({ type: 'SET_LOADING', loading: false })
       })
 
       const channel = supabase.channel('posts-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async () => {
           const { data } = await supabase!.from('posts').select('*').order('date')
-          if (data) setPosts(data.map(dbToPost))
+          if (data) dispatch({ type: 'SET_POSTS', posts: data.map(dbToPost) })
         })
         .subscribe()
 
@@ -452,12 +513,13 @@ export default function Home() {
         const sp = localStorage.getItem('joyn-posts-v3')
         if (sp) {
           const parsed = JSON.parse(sp)
-          setPosts(parsed.map((p: Post & { promoCode?: string }) => ({
+          const loadedPosts = parsed.map((p: Post & { promoCode?: string }) => ({
             ...p,
             promo_code: p.promo_code ?? p.promoCode,
             is_posted:  p.is_posted  ?? false,
             note:       p.note       ?? '',
-          })))
+          }))
+          initPosts(loadedPosts)
         } else {
           // migrate posted/notes from old format
           const sv = localStorage.getItem('joyn-posted')
@@ -469,11 +531,11 @@ export default function Home() {
             is_posted: oldPosted.has(p.id),
             note: oldNotes[p.id] ?? '',
           }))
-          setPosts(migrated)
+          initPosts(migrated)
           localStorage.setItem('joyn-posts-v3', JSON.stringify(migrated))
         }
-      } catch { /* use SEED default */ }
-      setLoading(false)
+      } catch { initPosts(SEED) }
+      dispatch({ type: 'SET_LOADING', loading: false })
     }
   }, [])
 
@@ -485,7 +547,7 @@ export default function Home() {
 
   const updatePost = async (p: Post) => {
     if (USE_SB && supabase) {
-      setPosts(prev => prev.map(x => x.id === p.id ? p : x))
+      setPosts(posts.map(x => x.id === p.id ? p : x))
       await supabase.from('posts').upsert({
         id: p.id, date: p.date, platform: p.platform, format: p.format,
         hook: p.hook, shoot: p.shoot, caption: p.caption,
@@ -500,7 +562,7 @@ export default function Home() {
 
   const deletePost = async (id: string) => {
     if (USE_SB && supabase) {
-      setPosts(prev => prev.filter(x => x.id !== id))
+      setPosts(posts.filter(x => x.id !== id))
       await supabase.from('posts').delete().eq('id', id)
     } else {
       lsSave(posts.filter(x => x.id !== id))
@@ -590,6 +652,38 @@ export default function Home() {
 
       <SetupBanner hasSupabase={USE_SB} />
 
+      {/* ── HERO STRIP ────────────────────────────────────────────────── */}
+      <div className="bg-[#0a0a0a] px-4 sm:px-6 lg:px-16 py-6 sm:py-8">
+        <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="text-[10px] font-black text-[#FD5C1E] uppercase tracking-[0.2em] mb-1.5">2026 Social Playbook</div>
+            <h1 className="text-lg sm:text-2xl font-black text-white leading-tight">
+              Confidence in a capsule.
+            </h1>
+            <p className="text-gray-500 text-xs mt-1">
+              {totalPosts} posts · TikTok, Instagram, Pinterest · Feb–Mar 2026
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <SyncBadge active={USE_SB} />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-400">
+                <span className="font-bold text-white">{totalPosted}</span>/{totalPosts}
+                <span className="ml-1 text-gray-600">posted</span>
+              </span>
+              <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-[#FD5C1E] rounded-full transition-all duration-700"
+                  style={{ width: totalPosts ? `${(totalPosted / totalPosts) * 100}%` : '0%' }} />
+              </div>
+            </div>
+            <Link href="/strategy"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#FD5C1E] border border-[#FD5C1E]/30 hover:border-[#FD5C1E] px-3.5 py-2 rounded-full transition-colors">
+              Strategy Deck ↗
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* ── TODAY ──────────────────────────────────────────────────────── */}
       <section id="today" className="section-anchor border-b border-gray-100">
 
@@ -597,20 +691,15 @@ export default function Home() {
         <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-16 py-4 sm:py-5">
           <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#0a0a0a] leading-none">
+              <div className="text-[10px] text-gray-400 font-medium uppercase tracking-widest mb-0.5">Today</div>
+              <h2 className="text-xl sm:text-2xl font-bold text-[#0a0a0a] leading-none">
                 {now ? `${DAY_FULL[now.getDay()]}, ${MONTH_NAMES[now.getMonth()]} ${now.getDate()}` : '—'}
-              </h1>
+              </h2>
             </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <SyncBadge active={USE_SB} />
-              <span className="text-sm text-gray-400">
-                <span className="font-semibold text-[#0a0a0a]">{totalPosted}</span>/{totalPosts} posted
-              </span>
-              <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#FD5C1E] rounded-full transition-all duration-500"
-                  style={{ width: totalPosts ? `${(totalPosted / totalPosts) * 100}%` : '0%' }} />
-              </div>
-            </div>
+            <button onClick={() => setAddingPost(blankPost(todayStr))}
+              className="flex items-center gap-2 bg-[#FD5C1E] text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#e54d18] btn-brand">
+              + Add Post
+            </button>
           </div>
         </div>
 
@@ -1055,21 +1144,40 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="px-4 sm:px-6 lg:px-16 py-8 sm:py-10 bg-[#0a0a0a]">
-        <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="text-white font-semibold text-sm">Joyn — 2026 Social Playbook</div>
-            <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · {USE_SB ? 'team sync active' : 'local mode'}</div>
+      <footer className="px-4 sm:px-6 lg:px-16 py-10 sm:py-14 bg-[#0a0a0a]">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="flex items-center justify-between flex-wrap gap-6 mb-8 pb-8 border-b border-white/10">
+            <div>
+              <div className="text-white font-black text-base">Joyn — 2026 Social Playbook</div>
+              <div className="text-gray-600 text-xs mt-1">{totalPosts} posts · {USE_SB ? 'team sync active' : 'local mode'} · Confidence in a capsule.</div>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Link href="/strategy"
+                className="px-4 py-2 border border-white/20 rounded-full text-xs font-bold text-gray-400 hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-colors">
+                Strategy Deck
+              </Link>
+              <Link href="/brand"
+                className="px-4 py-2 border border-white/20 rounded-full text-xs font-bold text-gray-400 hover:border-[#FD5C1E] hover:text-[#FD5C1E] transition-colors">
+                Brand Guide
+              </Link>
+              <button onClick={() => window.print()}
+                className="px-4 py-2 bg-[#FD5C1E] rounded-full text-xs font-black text-white hover:bg-[#e54d18] transition-colors">
+                Download Strategy
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-4 sm:gap-5 flex-wrap">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-5 flex-wrap">
+              <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
+                className="text-gray-500 text-xs font-medium hover:text-gray-300 transition-colors">
+                joynthefun.com ↗
+              </a>
+              <Link href="/setup" className="text-gray-600 text-xs font-medium hover:text-gray-400 transition-colors">Setup</Link>
+            </div>
             <button onClick={() => { if (window.confirm('Reset all data? This will delete any custom posts, edits, and progress.')) { localStorage.clear(); window.location.reload() } }}
-              className="text-gray-600 text-xs font-semibold hover:text-gray-400 transition-colors">
+              className="text-gray-700 text-xs font-medium hover:text-gray-500 transition-colors">
               Reset data
             </button>
-            <a href="https://www.joynthefun.com" target="_blank" rel="noopener noreferrer"
-              className="text-gray-500 text-xs font-medium hover:text-gray-300 transition-colors">
-              joynthefun.com ↗
-            </a>
           </div>
         </div>
       </footer>
